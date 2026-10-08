@@ -8,8 +8,9 @@ from uuid import UUID, uuid4
 
 from fastapi import Depends
 from sqlalchemy import DateTime, Dialect, Integer, String, Text, TypeDecorator, Uuid, event
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from app.config import get_settings
 
@@ -57,7 +58,7 @@ class IdempotencyKey(Base):
 def _engine(url: str, *, read_only: bool) -> AsyncEngine:
     """One engine per process and role, holding a pool of open connections: a request borrows one for its
     transaction and gives it back, it never opens its own. Connections and statements are bounded by timeouts,
-    so a stalled database fails requests fast instead of piling them up. The read engine refuses writes at
+    so a stalled database fails requests fast instead of piling them up. A replica's engine refuses writes at
     the database level."""
     settings = get_settings()
     if url.startswith("sqlite"):  # tests
@@ -92,13 +93,33 @@ def engine() -> AsyncEngine:
 
 @lru_cache
 def read_engine() -> AsyncEngine:
-    """Read replica (`DATABASE_READ_URL`), or the primary when there is none, always read-only."""
-    settings = get_settings()
-    return _engine(settings.database_read_url or settings.database_url, read_only=True)
+    """Read replica (`DATABASE_READ_URL`), read-only. Without a replica, the primary's engine and pool: no
+    second pool for the same database."""
+    url = get_settings().database_read_url
+    return _engine(url, read_only=True) if url else engine()
 
 
 def engines() -> list[AsyncEngine]:
-    return [engine(), read_engine()]
+    return list(dict.fromkeys([engine(), read_engine()]))
+
+
+class ReadOnlyError(RuntimeError):
+    pass
+
+
+class _ReadOnlySession(Session):
+    """Session of `ReadSession`: every transaction is read-only, even on the primary's pool."""
+
+
+@event.listens_for(_ReadOnlySession, "after_begin")
+def _read_only_transaction(session: Session, transaction: Any, connection: Connection) -> None:
+    if connection.dialect.name == "postgresql":
+        connection.exec_driver_sql("SET TRANSACTION READ ONLY")
+
+
+@event.listens_for(_ReadOnlySession, "before_flush")
+def _refuse_writes(session: Session, context: Any, instances: Any) -> None:
+    raise ReadOnlyError("ReadSession is read-only: write through WriteSession")
 
 
 @lru_cache
@@ -108,7 +129,7 @@ def sessionmaker() -> async_sessionmaker[AsyncSession]:
 
 @lru_cache
 def read_sessionmaker() -> async_sessionmaker[AsyncSession]:
-    return async_sessionmaker(read_engine(), expire_on_commit=False)
+    return async_sessionmaker(read_engine(), expire_on_commit=False, sync_session_class=_ReadOnlySession)
 
 
 async def write_session() -> AsyncIterator[AsyncSession]:

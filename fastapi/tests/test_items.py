@@ -45,11 +45,19 @@ async def test_cursor_pagination(client: AsyncClient) -> None:
 
 async def test_read_session_refuses_writes() -> None:
     import pytest
+    from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
 
     from app import db
 
+    assert db.read_engine() is db.engine(), "no replica: one pool"
     async with db.read_sessionmaker()() as session:
-        session.add(db.Item(name="interdit"))
-        with pytest.raises(DBAPIError):
+        session.add(db.Item(name="forbidden"))
+        with pytest.raises(db.ReadOnlyError):
             await session.commit()
+    if db.engine().dialect.name == "postgresql":  # raw SQL too, refused by the database
+        async with db.read_sessionmaker()() as session:
+            with pytest.raises(DBAPIError):
+                await session.execute(
+                    text("INSERT INTO items (id, name, created_at) VALUES (gen_random_uuid(), 'x', now())")
+                )
