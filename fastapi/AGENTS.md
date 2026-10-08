@@ -17,8 +17,9 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
   every outbound call; long CPU-bound work goes to a worker through a queue.
 - Database connections come from the pools of `app/db.py`, never opened per request. Keep transactions
   short, and never hold one open while calling another service.
-- Reads use `db.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only in any case). Writes,
-  and reads that must see a write just made, use `db.WriteSession`. Never both in one transaction.
+- A handler that only reads uses `db.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only
+  in any case). A handler that writes uses `db.WriteSession` for all its work, including the reads it needs
+  to decide; it never mixes both. A write returns the updated resource, so clients need not read it back.
 - `GET /healthz` (alive), `GET /readyz` (dependencies reachable, `503` during shutdown) and `GET /metrics`
   (Prometheus) stay at the root path, on `PORT`, outside `/api` and `/internal`.
 - Graceful shutdown on `SIGTERM` within `SHUTDOWN_TIMEOUT_S`: in-flight work completes.

@@ -121,7 +121,8 @@ async def read_session() -> AsyncIterator[AsyncSession]:
         yield s
 
 
-# Reads go to `ReadSession`. Writes, and reads that must see a write just made (a replica lags slightly
-# behind), go to `WriteSession`. Never both in one transaction.
+# A handler that only reads uses `ReadSession`; a handler that writes uses `WriteSession` for all its work,
+# including the reads it needs to decide. A write returns the updated resource, so clients need not read
+# it back from a replica that may lag slightly behind.
 WriteSession = Annotated[AsyncSession, Depends(write_session)]
 ReadSession = Annotated[AsyncSession, Depends(read_session)]
