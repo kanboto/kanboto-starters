@@ -1,0 +1,276 @@
+openapi: 3.1.0
+info:
+  title: starter-fastapi
+  version: 1.0.0
+paths:
+  /api/v1/items:
+    get:
+      tags:
+      - items
+      summary: List Items
+      operationId: list_items_api_v1_items_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Nombre d'éléments par page
+          default: 20
+          title: Limit
+        description: Nombre d'éléments par page
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` de la page précédente'
+          title: Cursor
+        description: '`next_cursor` de la page précédente'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_ItemOut_'
+        '400':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Bad Request
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Content
+        '500':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Internal Server Error
+    post:
+      tags:
+      - items
+      summary: Create Item
+      operationId: create_item_api_v1_items_post
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+          description: Clé unique par opération, générée par le client (un UUID) et
+            renvoyée à l'identique à chaque nouvelle tentative.
+          title: Idempotency-Key
+        description: Clé unique par opération, générée par le client (un UUID) et
+          renvoyée à l'identique à chaque nouvelle tentative.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemOut'
+        '400':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Bad Request
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Content
+        '500':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Internal Server Error
+  /api/v1/items/{item_id}:
+    get:
+      tags:
+      - items
+      summary: Get Item
+      operationId: get_item_api_v1_items__item_id__get
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemOut'
+        '400':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Bad Request
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Content
+        '500':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Internal Server Error
+components:
+  schemas:
+    ItemIn:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+      type: object
+      required:
+      - name
+      title: ItemIn
+    ItemOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - name
+      - created_at
+      title: ItemOut
+    Page_ItemOut_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ItemOut'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      type: object
+      required:
+      - items
+      - next_cursor
+      title: Page[ItemOut]
+    Problem:
+      properties:
+        type:
+          type: string
+          title: Type
+          default: about:blank
+        title:
+          type: string
+          title: Title
+        status:
+          type: integer
+          title: Status
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+        errors:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Errors
+      type: object
+      required:
+      - title
+      - status
+      title: Problem
