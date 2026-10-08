@@ -1,5 +1,5 @@
-"""Version 1 de l'API publique (`/api/v1`). Un changement cassant ouvre `/api/v2` ; v1 est alors dépréciée
-avec une date de retrait (en-têtes `Deprecation` et `Sunset`, `deprecated` dans la spec)."""
+"""Version 1 of the public API (`/api/v1`). A breaking change opens `/api/v2`; v1 is then deprecated with a
+removal date (`Deprecation` and `Sunset` headers, `deprecated` in the spec)."""
 
 from fastapi import APIRouter
 

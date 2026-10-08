@@ -1,4 +1,4 @@
-"""Application : routes publiques sous `/api/v<N>`, sondes et métriques à la racine."""
+"""Application: public routes under `/api/v<N>`, probes and metrics at the root path."""
 
 import logging
 from collections.abc import AsyncIterator
@@ -14,12 +14,12 @@ log = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    log.info("démarrage")
+    log.info("starting")
     yield
-    # SIGTERM reçu : uvicorn n'accepte plus de connexion et termine celles en cours (SHUTDOWN_TIMEOUT_S).
+    # SIGTERM received: uvicorn stops accepting connections and drains in-flight ones (SHUTDOWN_TIMEOUT_S).
     health.State.stopping = True
     await db.engine().dispose()
-    log.info("arrêt")
+    log.info("stopped")
 
 
 def create_app() -> FastAPI:

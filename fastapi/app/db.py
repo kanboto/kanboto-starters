@@ -1,4 +1,4 @@
-"""Base de données : la seule mémoire de l'application, qui ne garde rien entre deux requêtes."""
+"""Database: the only state of the service, which keeps nothing in memory between requests."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -29,7 +29,7 @@ class Item(Base):
 
 
 class IdempotencyKey(Base):
-    """Réponse d'une création, gardée avec la clé du client : une nouvelle tentative la rejoue."""
+    """Response to a creation, stored with the client's key: a retry replays it."""
 
     __tablename__ = "idempotency_keys"
 
@@ -42,7 +42,7 @@ class IdempotencyKey(Base):
 
 @lru_cache
 def engine() -> AsyncEngine:
-    """Créé au premier usage : l'application démarre même si la base est injoignable (`/readyz` le dira)."""
+    """Created on first use: the service starts even when the database is down (`/readyz` reports it)."""
     return create_async_engine(get_settings().database_url, pool_pre_ping=True)
 
 

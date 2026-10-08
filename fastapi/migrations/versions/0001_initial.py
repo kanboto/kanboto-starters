@@ -1,4 +1,4 @@
-"""Tables initiales : items et clés d'idempotence."""
+"""Initial tables: items and idempotency keys."""
 
 import sqlalchemy as sa
 from alembic import op

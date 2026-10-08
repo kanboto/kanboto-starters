@@ -1,4 +1,4 @@
-"""Contrat d'exécution : sondes, métriques, logs JSON, erreurs RFC 9457, spec OpenAPI à jour."""
+"""Runtime contract: probes, metrics, JSON logs, RFC 9457 errors, up-to-date OpenAPI spec."""
 
 import json
 import logging
@@ -36,14 +36,14 @@ async def test_errors_are_problem_json(client: AsyncClient) -> None:
 
 
 def test_logs_are_json() -> None:
-    record = logging.makeLogRecord({"name": "app", "levelname": "INFO", "msg": "prêt", "request_id": "r1"})
+    record = logging.makeLogRecord({"name": "app", "levelname": "INFO", "msg": "ready", "request_id": "r1"})
     entry = json.loads(logs.JsonFormatter().format(record))
-    assert entry["message"] == "prêt" and entry["level"] == "info" and entry["request_id"] == "r1"
+    assert entry["message"] == "ready" and entry["level"] == "info" and entry["request_id"] == "r1"
 
 
 def test_openapi_file_is_up_to_date() -> None:
     generated = subprocess.run(
         [sys.executable, "-m", "app", "openapi"], capture_output=True, text=True, check=True
     ).stdout
-    hint = "lancer : python -m app openapi > openapi/public.yaml"
+    hint = "run: python -m app openapi > openapi/public.yaml"
     assert generated == Path("openapi/public.yaml").read_text(), hint

@@ -14,11 +14,11 @@ from app.config import get_settings
 
 @pytest.fixture(autouse=True)
 async def database(tmp_path: Path) -> AsyncIterator[None]:
-    """Une base SQLite neuve par test, créée par les migrations : elles sont testées à chaque passage."""
+    """A fresh SQLite database per test, built by the migrations, so they are tested on every run."""
     os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
     for cached in (get_settings, db.engine, db.sessionmaker):
         cached.cache_clear()
-    # `migrations/env.py` lance sa propre boucle : hors de celle du test.
+    # `migrations/env.py` runs its own event loop: keep it out of the test's.
     await asyncio.to_thread(command.upgrade, Config("alembic.ini"), "head")
     yield
     await db.engine().dispose()

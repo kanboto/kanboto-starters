@@ -1,7 +1,7 @@
-"""Métriques Prometheus : celles du runtime (processus, ramasse-miettes) et des requêtes HTTP.
+"""Prometheus metrics: runtime (process, garbage collector) and HTTP requests.
 
-Un seul processus par conteneur : on passe à l'échelle par réplicas, pas par workers uvicorn. Les compteurs
-restent donc justes sans le mode multiprocessus de `prometheus_client`.
+One process per container: scale out with replicas, not uvicorn workers. Counters stay accurate without
+the multiprocess mode of `prometheus_client`.
 """
 
 import re
@@ -11,16 +11,16 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
-REQUESTS = Counter("http_requests_total", "Requêtes HTTP traitées", ["method", "route", "status"])
-LATENCY = Histogram("http_request_duration_seconds", "Durée des requêtes HTTP", ["method", "route"])
-# Exemple de métrique métier : à remplacer par celles du domaine.
-ITEMS_CREATED = Counter("items_created_total", "Items créés")
+REQUESTS = Counter("http_requests_total", "HTTP requests handled", ["method", "route", "status"])
+LATENCY = Histogram("http_request_duration_seconds", "HTTP request duration", ["method", "route"])
+# Example business metric: replace it with your domain's.
+ITEMS_CREATED = Counter("items_created_total", "Items created")
 
 UNTRACKED = {"/healthz", "/readyz", "/metrics"}
 
 
 def _templates(app: FastAPI) -> list[tuple[re.Pattern[str], str]]:
-    """Gabarits des routes de la spec (`/api/v1/items/{item_id}`), compilés une fois par application."""
+    """Route templates from the spec (`/api/v1/items/{item_id}`), compiled once per application."""
     if not hasattr(app.state, "route_templates"):
         app.state.route_templates = [
             (re.compile("^" + re.sub(r"\\{[^/]+\\}", "[^/]+", re.escape(path)) + "$"), path)
@@ -30,9 +30,9 @@ def _templates(app: FastAPI) -> list[tuple[re.Pattern[str], str]]:
 
 
 def _route(request: Request) -> str:
-    """Le gabarit de la route, jamais le chemin brut : la cardinalité des métriques reste bornée."""
+    """The route template, never the raw path, so metric cardinality stays bounded."""
     path = request.url.path
-    return next((template for regex, template in _templates(request.app) if regex.match(path)), "inconnue")
+    return next((template for regex, template in _templates(request.app) if regex.match(path)), "unknown")
 
 
 async def middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

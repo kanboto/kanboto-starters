@@ -1,4 +1,4 @@
-"""Migrations : l'URL de la base vient de l'environnement (`DATABASE_URL`), comme pour l'application."""
+"""Migrations read the database URL from the environment (`DATABASE_URL`), like the application."""
 
 import asyncio
 

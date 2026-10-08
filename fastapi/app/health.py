@@ -1,7 +1,7 @@
-"""Sondes de Kubernetes et métriques, à la racine : jamais exposées par l'ingress.
+"""Kubernetes probes and metrics, at the root path: never exposed through the ingress.
 
-`/healthz` (liveness) répond tant que le serveur répond ; `/readyz` (readiness) vérifie les dépendances et
-passe à 503 dès que l'arrêt commence, pour que Kubernetes retire le pod avant qu'il ne s'arrête.
+`/healthz` (liveness) answers as long as the server does; `/readyz` (readiness) checks dependencies and
+returns 503 as soon as shutdown starts, so Kubernetes stops routing traffic before the pod exits.
 """
 
 import logging
@@ -32,8 +32,8 @@ async def readyz(response: Response) -> dict[str, str]:
     try:
         async with db.engine().connect() as connection:
             await connection.execute(text("SELECT 1"))
-    except Exception as exc:  # toute panne de la base rend le pod indisponible, sans le tuer
-        log.warning("base injoignable", extra={"error": str(exc)})
+    except Exception as exc:  # a database outage makes the pod unready, it does not kill it
+        log.warning("database unreachable", extra={"error": str(exc)})
         response.status_code = 503
         return {"status": "unavailable"}
     return {"status": "ok"}

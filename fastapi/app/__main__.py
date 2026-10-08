@@ -1,4 +1,4 @@
-"""Point d'entrée de l'image : `serve` (défaut), `migrate` (Job de migration), `openapi` (spec publique)."""
+"""Image entrypoint: `serve` (default), `migrate` (migration Job), `openapi` (public spec)."""
 
 import argparse
 import logging.config
@@ -27,7 +27,7 @@ def serve() -> None:
 
 
 def migrate() -> None:
-    """Idempotent : n'applique que les migrations manquantes. Lancé par un Job, jamais au démarrage."""
+    """Idempotent: applies pending migrations only. Run by a Job, never at service startup."""
     from alembic import command
     from alembic.config import Config
 

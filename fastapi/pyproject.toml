@@ -1,7 +1,7 @@
 [project]
 name = "starter-fastapi"
 version = "0.1.0"
-description = "Starter Kanboto : API FastAPI prête pour Kubernetes"
+description = "Kanboto FastAPI starter: a Kubernetes-ready API"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.143,<1",

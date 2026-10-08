@@ -1,4 +1,4 @@
-"""Logs JSON sur la sortie standard, une ligne par événement, y compris ceux d'uvicorn."""
+"""JSON logs on stdout, one line per event, uvicorn's included."""
 
 import json
 import logging
@@ -23,7 +23,7 @@ class JsonFormatter(logging.Formatter):
 
 
 def config(level: str) -> dict[str, Any]:
-    """Configuration `logging` commune à l'application et à uvicorn."""
+    """`logging` configuration shared by the application and uvicorn."""
     handler = {"class": "logging.StreamHandler", "formatter": "json", "stream": "ext://sys.stdout"}
     return {
         "version": 1,

@@ -1,4 +1,4 @@
-"""Ressource d'exemple, à remplacer par celles du domaine : elle montre les conventions de l'API."""
+"""Example resource showing the API conventions: replace it with your domain's resources."""
 
 from datetime import datetime
 from typing import Annotated
@@ -24,7 +24,7 @@ class ItemIn(BaseModel):
 class ItemOut(BaseModel):
     id: UUID
     name: str
-    created_at: datetime  # ISO 8601, en UTC
+    created_at: datetime  # ISO 8601, UTC
 
 
 def _out(item: db.Item) -> ItemOut:
@@ -51,7 +51,7 @@ async def list_items(
 async def get_item(item_id: UUID, session: Session) -> ItemOut:
     item = await session.get(db.Item, item_id)
     if item is None:
-        raise HTTPException(404, "item introuvable")
+        raise HTTPException(404, "item not found")
     return _out(item)
 
 

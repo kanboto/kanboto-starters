@@ -1,6 +1,6 @@
-"""Pagination par curseur, de même forme sur toute l'API : `?limit=&cursor=`, rend `items` et `next_cursor`.
+"""Cursor pagination, identical across the API: `?limit=&cursor=`, returns `items` and `next_cursor`.
 
-Le curseur est opaque pour le client : la position (date de création, identifiant) du dernier élément rendu.
+The cursor is opaque to clients: it encodes the position (creation date, id) of the last item returned.
 """
 
 import base64
@@ -12,8 +12,8 @@ from uuid import UUID
 from fastapi import HTTPException, Query
 from pydantic import BaseModel
 
-Limit = Annotated[int, Query(ge=1, le=100, description="Nombre d'éléments par page")]
-Cursor = Annotated[str | None, Query(description="`next_cursor` de la page précédente")]
+Limit = Annotated[int, Query(ge=1, le=100, description="Items per page")]
+Cursor = Annotated[str | None, Query(description="`next_cursor` from the previous page")]
 
 
 class Page[T](BaseModel):
@@ -31,4 +31,4 @@ def decode(cursor: str) -> tuple[datetime, UUID]:
         created_at, id = json.loads(base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)))
         return datetime.fromisoformat(created_at), UUID(id)
     except (ValueError, TypeError) as exc:
-        raise HTTPException(400, "curseur invalide") from exc
+        raise HTTPException(400, "invalid cursor") from exc

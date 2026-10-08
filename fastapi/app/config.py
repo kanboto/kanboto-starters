@@ -1,4 +1,4 @@
-"""Toute la configuration vient de l'environnement, sans valeur en dur ; liste dans `.env.example`."""
+"""All configuration comes from the environment, with no hard-coded value; see `.env.example`."""
 
 from functools import lru_cache
 
