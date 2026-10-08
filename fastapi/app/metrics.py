@@ -1,6 +1,6 @@
 """Prometheus metrics: runtime (process, garbage collector) and HTTP requests.
 
-One process per container: scale out with replicas, not uvicorn workers. Counters stay accurate without
+One process per container: scale out with more instances, not uvicorn workers. Counters stay accurate without
 the multiprocess mode of `prometheus_client`.
 """
 

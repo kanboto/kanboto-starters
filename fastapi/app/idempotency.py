@@ -1,6 +1,6 @@
 """`Idempotency-Key` on creations: a retry with the same key replays the same response.
 
-Keys and responses are stored in the database (`IDEMPOTENCY_TTL_S`), so any replica can replay them. The
+Keys and responses are stored in the database (`IDEMPOTENCY_TTL_S`), so any instance can replay them. The
 same key with a different body gets a 422. When two requests race with the same key, the unique constraint
 decides and the second one replays the first one's response.
 """

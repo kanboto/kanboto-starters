@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str
     log_level: str = "INFO"
 
-    # Database: every call is bounded, and the pool is sized per replica.
+    # Database: every call is bounded, and the pool is sized per instance.
     db_connect_timeout_s: float = 3
     db_statement_timeout_s: float = 10
     db_pool_size: int = 5
@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     ready_timeout_s: float = 2
 
     # Shutdown: on SIGTERM, /readyz fails for DRAIN_DELAY_S while traffic is still served, then in-flight
-    # requests get SHUTDOWN_TIMEOUT_S to complete. Keep the sum under the pod's termination grace period.
+    # requests get SHUTDOWN_TIMEOUT_S to complete.
     drain_delay_s: float = 5
     shutdown_timeout_s: int = 20
 
-    # Proxies trusted for X-Forwarded-* headers (comma-separated IPs or CIDRs), e.g. the ingress pods.
+    # Proxies trusted for X-Forwarded-* headers (comma-separated IPs or CIDRs).
     forwarded_allow_ips: str = "127.0.0.1"
     max_body_bytes: int = 1_048_576
     idempotency_ttl_s: int = 86_400

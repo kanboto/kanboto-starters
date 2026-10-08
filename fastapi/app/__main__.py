@@ -1,4 +1,4 @@
-"""Image entrypoint: `serve` (default), `migrate` (migration Job), `cleanup` (CronJob), `openapi` (spec)."""
+"""Image entrypoint: `serve` (default), `migrate`, `cleanup` (periodic), `openapi` (spec)."""
 
 import argparse
 import asyncio
@@ -19,8 +19,8 @@ log = logging.getLogger("app")
 class Server(uvicorn.Server):
     """Graceful shutdown in two phases.
 
-    On SIGTERM, `/readyz` fails at once while traffic is still served for `DRAIN_DELAY_S`, the time Kubernetes
-    needs to remove the pod from its Service. Uvicorn then stops accepting connections and lets in-flight
+    On SIGTERM, `/readyz` fails at once while traffic is still served for `DRAIN_DELAY_S`, so that load
+    balancers stop sending new requests. Uvicorn then stops accepting connections and lets in-flight
     requests finish within `SHUTDOWN_TIMEOUT_S`. A second signal, or SIGINT (Ctrl-C), stops right away.
     """
 
@@ -53,7 +53,7 @@ def serve() -> None:
 
 
 def migrate() -> None:
-    """Idempotent: applies pending migrations only. Run by a Job, never at service startup."""
+    """Idempotent: applies pending migrations only. Run before starting a new version, never at startup."""
     from alembic import command
     from alembic.config import Config
 
@@ -62,7 +62,7 @@ def migrate() -> None:
 
 
 def cleanup() -> None:
-    """Deletes expired idempotency keys. Run periodically by a CronJob, not on the request path."""
+    """Deletes expired idempotency keys. Run periodically, not on the request path."""
     from app import idempotency
 
     logging.config.dictConfig(logs.config(get_settings().log_level))

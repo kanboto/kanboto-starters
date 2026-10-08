@@ -1,6 +1,6 @@
 # FastAPI starter
 
-A minimal, Kubernetes-ready HTTP API built with FastAPI, SQLAlchemy (async) and PostgreSQL. It ships with
+A minimal, production-ready HTTP API built with FastAPI, SQLAlchemy (async) and PostgreSQL. It ships with
 everything a production service needs and nothing it does not: probes, Prometheus metrics, graceful
 shutdown, JSON logs, a hardened image, and a versioned, idempotent API.
 
@@ -54,8 +54,8 @@ All configuration comes from environment variables.
 | `LOG_LEVEL` | `INFO` | Log level |
 | `DB_CONNECT_TIMEOUT_S` | `3` | Timeout to open a database connection |
 | `DB_STATEMENT_TIMEOUT_S` | `10` | Timeout for a single SQL statement |
-| `DB_POOL_SIZE` | `5` | Connections kept open per replica |
-| `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per replica |
+| `DB_POOL_SIZE` | `5` | Connections kept open per instance |
+| `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per instance |
 | `DB_POOL_TIMEOUT_S` | `5` | Wait for a free connection before failing the request |
 | `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
 | `DRAIN_DELAY_S` | `5` | After `SIGTERM`, time readiness fails while traffic is still served |
@@ -64,9 +64,8 @@ All configuration comes from environment variables.
 | `MAX_BODY_BYTES` | `1048576` | Largest request body accepted (`413` beyond) |
 | `IDEMPOTENCY_TTL_S` | `86400` | How long idempotency keys are kept |
 
-Size the pool so that `replicas × (DB_POOL_SIZE + DB_MAX_OVERFLOW)` stays under the database's connection
-limit, and keep `DRAIN_DELAY_S + SHUTDOWN_TIMEOUT_S` under the pod's termination grace period (30 s by
-default).
+Size the pool so that `instances × (DB_POOL_SIZE + DB_MAX_OVERFLOW)` stays under the database's
+connection limit. After `SIGTERM`, the process exits within `DRAIN_DELAY_S + SHUTDOWN_TIMEOUT_S`.
 
 ## Container image
 
@@ -77,10 +76,10 @@ docker run --read-only --tmpfs /tmp --env-file .env.example -p 8080:8080 starter
 
 The same image runs the other commands:
 
-| Command | Run it as | Purpose |
+| Command | When | Purpose |
 |---|---|---|
-| `python -m app migrate` | a Job, before each rollout | Apply pending migrations; the service never migrates at startup |
-| `python -m app cleanup` | a CronJob, e.g. hourly | Delete expired idempotency keys |
+| `python -m app migrate` | before starting a new version | Apply pending migrations; the service never migrates at startup |
+| `python -m app cleanup` | periodically, e.g. hourly | Delete expired idempotency keys |
 
 ## Endpoints
 

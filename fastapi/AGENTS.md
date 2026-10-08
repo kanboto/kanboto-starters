@@ -6,13 +6,13 @@
 This section is maintained by Kanboto: do not edit it by hand, Kanboto updates it through pull requests.
 The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does not pass.
 
-### Runtime (Kubernetes)
+### Runtime
 
 - Configuration through environment variables only, each one listed in `.env.example`; no hard-coded
-  value, no configuration file in the image. Addresses of other services come from explicit variables
-  (`BILLING_API_URL`), never from Kubernetes service discovery variables.
+  value, no configuration file in the image. Each service the application calls has its own variable
+  (`BILLING_API_URL`).
 - Stateless: nothing is written outside `/tmp` (the image runs on a read-only filesystem); sessions, files
-  and caches live in an external service. Several replicas run side by side.
+  and caches live in an external service. Several instances run side by side.
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
   every outbound call; long CPU-bound work goes to a worker through a queue.
 - `GET /healthz` (alive), `GET /readyz` (dependencies reachable, `503` during shutdown) and `GET /metrics`
