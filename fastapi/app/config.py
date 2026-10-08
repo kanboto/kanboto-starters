@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 5
     db_pool_timeout_s: float = 5
+    db_pool_recycle_s: int = 1800
     ready_timeout_s: float = 2
 
     # Shutdown: on SIGTERM, /readyz fails for DRAIN_DELAY_S while traffic is still served, then in-flight

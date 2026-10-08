@@ -57,8 +57,9 @@ class IdempotencyKey(Base):
 def engine() -> AsyncEngine:
     """Created on first use: the service starts even when the database is down (`/readyz` reports it).
 
-    Connections and statements are bounded by timeouts, so a stalled database fails requests fast instead of
-    piling them up.
+    One engine per process, holding a pool of open connections: a request borrows one for its transaction and
+    gives it back, it never opens its own. Connections and statements are bounded by timeouts, so a stalled
+    database fails requests fast instead of piling them up.
     """
     settings = get_settings()
     if settings.database_url.startswith("sqlite"):  # tests
@@ -69,6 +70,7 @@ def engine() -> AsyncEngine:
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
         pool_timeout=settings.db_pool_timeout_s,
+        pool_recycle=settings.db_pool_recycle_s,
         connect_args={
             "timeout": settings.db_connect_timeout_s,
             "command_timeout": settings.db_statement_timeout_s,

@@ -57,6 +57,7 @@ All configuration comes from environment variables.
 | `DB_POOL_SIZE` | `5` | Connections kept open per instance |
 | `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per instance |
 | `DB_POOL_TIMEOUT_S` | `5` | Wait for a free connection before failing the request |
+| `DB_POOL_RECYCLE_S` | `1800` | Replace connections older than this |
 | `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
 | `DRAIN_DELAY_S` | `5` | After `SIGTERM`, time readiness fails while traffic is still served |
 | `SHUTDOWN_TIMEOUT_S` | `20` | Then, grace period for in-flight requests |

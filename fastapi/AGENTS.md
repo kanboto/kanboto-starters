@@ -15,6 +15,8 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
   and caches live in an external service. Several instances run side by side.
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
   every outbound call; long CPU-bound work goes to a worker through a queue.
+- Database connections come from the pool of `app/db.py`, never opened per request. Keep transactions
+  short, and never hold one open while calling another service.
 - `GET /healthz` (alive), `GET /readyz` (dependencies reachable, `503` during shutdown) and `GET /metrics`
   (Prometheus) stay at the root path, on `PORT`, outside `/api` and `/internal`.
 - Graceful shutdown on `SIGTERM` within `SHUTDOWN_TIMEOUT_S`: in-flight work completes.
