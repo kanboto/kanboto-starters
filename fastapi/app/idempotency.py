@@ -8,7 +8,7 @@ decides and the second one replays the first one's response.
 import hashlib
 import json
 from collections.abc import Awaitable, Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import Header
@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.db import IdempotencyKey, utcnow
+from app.db import IdempotencyKey, sessionmaker, utcnow
 from app.errors import problem
 
 KeyHeader = Annotated[
@@ -44,10 +44,12 @@ async def run(
     create: Callable[[], Awaitable[tuple[int, Any]]],
 ) -> JSONResponse:
     """`create` performs the operation and returns (status, body); it runs at most once per key."""
-    expiry = utcnow() - timedelta(seconds=get_settings().idempotency_ttl_s)
-    await session.execute(delete(IdempotencyKey).where(IdempotencyKey.created_at < expiry))
     request_hash = _hash(payload)
     stored = await session.scalar(select(IdempotencyKey).where(IdempotencyKey.key == key))
+    if stored is not None and stored.created_at < _expiry():
+        await session.delete(stored)  # expired, not purged yet: the key is free again
+        await session.flush()
+        stored = None
     if stored is None:
         status, body = await create()
         stored_body = json.dumps(body)
@@ -64,3 +66,15 @@ async def run(
         return problem(422, "this idempotency key was already used for a different request")
     replayed = {"Idempotent-Replayed": "true"}
     return JSONResponse(json.loads(stored.body), status_code=stored.status_code, headers=replayed)
+
+
+def _expiry() -> datetime:
+    return utcnow() - timedelta(seconds=get_settings().idempotency_ttl_s)
+
+
+async def purge() -> int:
+    """Deletes expired keys; returns how many."""
+    async with sessionmaker()() as session:
+        result = await session.execute(delete(IdempotencyKey).where(IdempotencyKey.created_at < _expiry()))
+        await session.commit()
+        return int(getattr(result, "rowcount", 0) or 0)

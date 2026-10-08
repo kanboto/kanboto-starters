@@ -16,7 +16,7 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
   every outbound call; long CPU-bound work goes to a worker through a queue.
 - `GET /healthz` (alive), `GET /readyz` (dependencies reachable, `503` during shutdown) and `GET /metrics`
-  (Prometheus) stay at the root path on `PORT`; they are never exposed publicly.
+  (Prometheus) stay at the root path, on `PORT`, outside `/api` and `/internal`.
 - Graceful shutdown on `SIGTERM` within `SHUTDOWN_TIMEOUT_S`: in-flight work completes.
 - JSON logs on stdout, one line per event.
 - Multi-stage image, non-root user, base images pinned by digest; migrations run through
@@ -28,7 +28,8 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
   appears in the path.
 - A backward-compatible change (new field, optional parameter or endpoint) stays in the current version.
   A breaking change opens `/api/v<N+1>/`; the previous version keeps being served, marked `deprecated`
-  with a removal date (`Deprecation` and `Sunset` headers). Nothing breaks in a published version.
+  with a removal date (`Deprecation` and `Sunset` headers, see `app/deprecation.py`). Nothing breaks in a
+  published version.
 - `openapi/public.yaml` follows the code: `python -m app openapi > openapi/public.yaml`.
 - Errors use RFC 9457 (`application/problem+json`); dates are ISO 8601 in UTC; pagination is
   cursor-based (`limit`, `cursor`, response `items` and `next_cursor`); resource names are plural.
@@ -39,13 +40,13 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
 
 - Install: `uv sync`
 - Lint, format, types: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy .`
-- Tests: `uv run pytest`
+- Tests: `uv run pytest` (SQLite), `TEST_DATABASE_URL=postgresql+asyncpg://… uv run pytest` (PostgreSQL)
 <!-- kanboto:end -->
 
 ## This starter
 
 - `app/main.py` assembles the application; `app/api/v1/` holds version 1 of the API. `items` is an example
   resource: replace it with your domain's, keeping its conventions.
-- `app/health.py`, `app/metrics.py`, `app/logs.py`, `app/errors.py`, `app/idempotency.py` and
-  `app/pagination.py` implement the contracts; keep them.
-- Tests run against SQLite, built by the migrations for each test; production uses PostgreSQL.
+- `app/health.py`, `app/middleware.py`, `app/metrics.py`, `app/logs.py`, `app/errors.py`,
+  `app/idempotency.py`, `app/pagination.py` and `app/deprecation.py` implement the contracts; keep them.
+- Every database call goes through `app/db.py`, whose engine bounds connections and statements by timeouts.

@@ -3,9 +3,10 @@
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from functools import lru_cache
+from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Integer, String, Text, Uuid
+from sqlalchemy import DateTime, Dialect, Integer, String, Text, TypeDecorator, Uuid
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -14,6 +15,18 @@ from app.config import get_settings
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+class UtcDateTime(TypeDecorator[datetime]):
+    """Always an aware UTC datetime, whatever the database returns (SQLite drops the time zone)."""
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_result_value(self, value: Any, dialect: Dialect) -> datetime | None:
+        if not isinstance(value, datetime):
+            return None
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 class Base(DeclarativeBase):
@@ -25,7 +38,7 @@ class Item(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(200))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, index=True)
 
 
 class IdempotencyKey(Base):
@@ -37,13 +50,30 @@ class IdempotencyKey(Base):
     request_hash: Mapped[str] = mapped_column(String(64))
     status_code: Mapped[int] = mapped_column(Integer)
     body: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, index=True)
 
 
 @lru_cache
 def engine() -> AsyncEngine:
-    """Created on first use: the service starts even when the database is down (`/readyz` reports it)."""
-    return create_async_engine(get_settings().database_url, pool_pre_ping=True)
+    """Created on first use: the service starts even when the database is down (`/readyz` reports it).
+
+    Connections and statements are bounded by timeouts, so a stalled database fails requests fast instead of
+    piling them up.
+    """
+    settings = get_settings()
+    if settings.database_url.startswith("sqlite"):  # tests
+        return create_async_engine(settings.database_url)
+    return create_async_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout_s,
+        connect_args={
+            "timeout": settings.db_connect_timeout_s,
+            "command_timeout": settings.db_statement_timeout_s,
+        },
+    )
 
 
 @lru_cache

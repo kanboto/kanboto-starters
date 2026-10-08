@@ -6,8 +6,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app import db, errors, health, metrics
+from app import db, errors, health
 from app.api import v1
+from app.middleware import RequestMiddleware
 
 log = logging.getLogger("app")
 
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     app = FastAPI(title="starter-fastapi", version="1.0.0", lifespan=lifespan)
     errors.install(app)
-    app.middleware("http")(metrics.middleware)
+    app.add_middleware(RequestMiddleware)
     app.include_router(health.router)
     app.include_router(v1.router)
     return app

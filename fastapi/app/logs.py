@@ -1,11 +1,14 @@
-"""JSON logs on stdout, one line per event, uvicorn's included."""
+"""JSON logs on stdout, one line per event, uvicorn's included. Every line logged while a request is being
+handled carries its `request_id`."""
 
 import json
 import logging
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
 RESERVED = set(logging.makeLogRecord({}).__dict__) | {"message", "asctime", "color_message"}
+request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 class JsonFormatter(logging.Formatter):
@@ -16,6 +19,8 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
+        if current := request_id.get():
+            entry["request_id"] = current
         entry |= {k: v for k, v in record.__dict__.items() if k not in RESERVED}
         if record.exc_info:
             entry["exception"] = self.formatException(record.exc_info)

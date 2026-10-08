@@ -5,10 +5,8 @@ the multiprocess mode of `prometheus_client`.
 """
 
 import re
-import time
-from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 REQUESTS = Counter("http_requests_total", "HTTP requests handled", ["method", "route", "status"])
@@ -29,25 +27,14 @@ def _templates(app: FastAPI) -> list[tuple[re.Pattern[str], str]]:
     return list(app.state.route_templates)
 
 
-def _route(request: Request) -> str:
+def route(app: FastAPI, path: str) -> str:
     """The route template, never the raw path, so metric cardinality stays bounded."""
-    path = request.url.path
-    return next((template for regex, template in _templates(request.app) if regex.match(path)), "unknown")
+    return next((template for regex, template in _templates(app) if regex.match(path)), "unknown")
 
 
-async def middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-    if request.url.path in UNTRACKED:
-        return await call_next(request)
-    start = time.perf_counter()
-    status = 500
-    try:
-        response = await call_next(request)
-        status = response.status_code
-        return response
-    finally:
-        route = _route(request)
-        LATENCY.labels(request.method, route).observe(time.perf_counter() - start)
-        REQUESTS.labels(request.method, route, str(status)).inc()
+def observe(method: str, route: str, status: int, duration: float) -> None:
+    LATENCY.labels(method, route).observe(duration)
+    REQUESTS.labels(method, route, str(status)).inc()
 
 
 def exposition() -> Response:

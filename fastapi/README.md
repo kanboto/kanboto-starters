@@ -36,11 +36,12 @@ curl localhost:8080/api/v1/items
 | Lint | `uv run ruff check .` |
 | Format check | `uv run ruff format --check .` |
 | Type check | `uv run mypy .` |
-| Tests | `uv run pytest` |
+| Tests (SQLite) | `uv run pytest` |
+| Tests (PostgreSQL) | `TEST_DATABASE_URL=postgresql+asyncpg://… uv run pytest` |
 | Regenerate the OpenAPI spec | `uv run python -m app openapi > openapi/public.yaml` |
 
-Tests run against SQLite, created by the migrations for every test, so migrations are exercised on every
-run. Production uses PostgreSQL through `asyncpg`.
+Every test gets a fresh database built by the migrations, so migrations are exercised on every run. Run the
+suite against PostgreSQL before merging: it is what production uses.
 
 ## Configuration
 
@@ -51,8 +52,21 @@ All configuration comes from environment variables.
 | `PORT` | `8080` | Port for the API, the probes and the metrics |
 | `DATABASE_URL` | required | PostgreSQL URL, e.g. `postgresql+asyncpg://user:pass@host:5432/db` |
 | `LOG_LEVEL` | `INFO` | Log level |
-| `SHUTDOWN_TIMEOUT_S` | `20` | Grace period for in-flight requests after `SIGTERM` |
+| `DB_CONNECT_TIMEOUT_S` | `3` | Timeout to open a database connection |
+| `DB_STATEMENT_TIMEOUT_S` | `10` | Timeout for a single SQL statement |
+| `DB_POOL_SIZE` | `5` | Connections kept open per replica |
+| `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per replica |
+| `DB_POOL_TIMEOUT_S` | `5` | Wait for a free connection before failing the request |
+| `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
+| `DRAIN_DELAY_S` | `5` | After `SIGTERM`, time readiness fails while traffic is still served |
+| `SHUTDOWN_TIMEOUT_S` | `20` | Then, grace period for in-flight requests |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Proxies trusted for `X-Forwarded-*` headers (IPs or CIDRs) |
+| `MAX_BODY_BYTES` | `1048576` | Largest request body accepted (`413` beyond) |
 | `IDEMPOTENCY_TTL_S` | `86400` | How long idempotency keys are kept |
+
+Size the pool so that `replicas × (DB_POOL_SIZE + DB_MAX_OVERFLOW)` stays under the database's connection
+limit, and keep `DRAIN_DELAY_S + SHUTDOWN_TIMEOUT_S` under the pod's termination grace period (30 s by
+default).
 
 ## Container image
 
@@ -61,17 +75,24 @@ docker build -t starter-fastapi .
 docker run --read-only --tmpfs /tmp --env-file .env.example -p 8080:8080 starter-fastapi
 ```
 
-The same image runs the migrations with `python -m app migrate`, typically from a Kubernetes Job before a
-rollout. The service itself never migrates at startup.
+The same image runs the other commands:
+
+| Command | Run it as | Purpose |
+|---|---|---|
+| `python -m app migrate` | a Job, before each rollout | Apply pending migrations; the service never migrates at startup |
+| `python -m app cleanup` | a CronJob, e.g. hourly | Delete expired idempotency keys |
 
 ## Endpoints
 
-| Path | Purpose | Exposed publicly |
-|---|---|---|
-| `/api/v1/...` | Public API, documented in [`openapi/public.yaml`](openapi/public.yaml) | Yes |
-| `/healthz` | Liveness: the server responds | No |
-| `/readyz` | Readiness: the database is reachable; `503` during shutdown | No |
-| `/metrics` | Prometheus metrics | No |
+| Path | Purpose |
+|---|---|
+| `/api/v1/...` | Public API, documented in [`openapi/public.yaml`](openapi/public.yaml) |
+| `/healthz` | Liveness: the server responds |
+| `/readyz` | Readiness: the database is reachable; `503` as soon as shutdown starts |
+| `/metrics` | Prometheus metrics |
+
+Every response carries an `X-Request-ID` (the caller's, or a generated one), also present on every log line
+written while handling the request.
 
 ## Project layout
 
@@ -82,7 +103,9 @@ app/
 ├── config.py        Settings, from the environment
 ├── api/v1/          Version 1 of the public API (items is an example resource)
 ├── health.py        Liveness and readiness probes
+├── middleware.py    Request id, access log, body limit, security headers
 ├── metrics.py       Prometheus metrics
+├── deprecation.py   Deprecation and Sunset headers for an old API version
 ├── logs.py          JSON logging
 ├── errors.py        RFC 9457 problem details
 ├── idempotency.py   Idempotency-Key handling

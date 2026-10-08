@@ -23,9 +23,9 @@ Every starter ships with the same guarantees, checked by its CI on every pull re
 - Configuration through environment variables only, each one documented in `.env.example`.
 - Stateless: runs on a read-only filesystem, scales horizontally.
 - Non-blocking I/O end to end, with a timeout on every outbound call.
-- `/healthz`, `/readyz` and `/metrics` (Prometheus) on the application port, never exposed publicly.
-- Graceful shutdown on `SIGTERM` within a bounded delay.
-- Structured JSON logs on stdout.
+- `/healthz`, `/readyz` and `/metrics` (Prometheus) at the root path, on the application port.
+- Graceful shutdown on `SIGTERM`: readiness fails first, in-flight requests complete.
+- Structured JSON logs on stdout, with a request id on every line.
 - Multi-stage image, non-root user, base images pinned by digest.
 
 **API**

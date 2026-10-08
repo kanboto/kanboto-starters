@@ -14,12 +14,19 @@ from app.config import get_settings
 
 @pytest.fixture(autouse=True)
 async def database(tmp_path: Path) -> AsyncIterator[None]:
-    """A fresh SQLite database per test, built by the migrations, so they are tested on every run."""
-    os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
+    """A fresh database per test, built by the migrations, so they are tested on every run.
+
+    PostgreSQL when `TEST_DATABASE_URL` is set (as in CI and production), SQLite otherwise.
+    """
+    url = os.environ.get("TEST_DATABASE_URL") or f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
+    os.environ["DATABASE_URL"] = url
     for cached in (get_settings, db.engine, db.sessionmaker):
         cached.cache_clear()
     # `migrations/env.py` runs its own event loop: keep it out of the test's.
-    await asyncio.to_thread(command.upgrade, Config("alembic.ini"), "head")
+    config = Config("alembic.ini")
+    if not url.startswith("sqlite"):
+        await asyncio.to_thread(command.downgrade, config, "base")
+    await asyncio.to_thread(command.upgrade, config, "head")
     yield
     await db.engine().dispose()
 
