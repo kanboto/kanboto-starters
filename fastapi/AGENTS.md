@@ -3,24 +3,24 @@
 <!-- kanboto:start -->
 ## Kanboto rules (FastAPI stack)
 
-This section is maintained by Kanboto: do not edit it by hand, Kanboto updates it through pull requests.
-The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does not pass.
+This section is maintained by Kanboto: do not edit it by hand, Kanboto updates it through pull requests. The
+CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does not pass.
 
 ### Runtime
 
-- Configuration through environment variables only, each one listed in `.env.example`; no hard-coded
-  value, no configuration file in the image. Each service the application calls has its own variable
+- Configuration through environment variables only, each one listed in `.env.example`; no hard-coded value, no
+  configuration file in the image. Each service the application calls has its own variable
   (`BILLING_API_URL`).
-- Stateless: nothing is written outside `/tmp` (the image runs on a read-only filesystem); sessions, files
-  and caches live in an external service. Several instances run side by side.
+- Stateless: nothing is written outside `/tmp` (the image runs on a read-only filesystem); sessions, files and
+  caches live in an external service. Several instances run side by side.
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
-  every outbound call; long CPU-bound work goes to a worker through a queue. Other services are called
-  through the shared client of `app/outbound.py`, never a client created per request.
-- Database connections come from the pools of `app/db.py`, never opened per request. Keep transactions
-  short, and never hold one open while calling another service.
-- A handler that only reads uses `db.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only
-  in any case). A handler that writes uses `db.WriteSession` for all its work, including the reads it needs
-  to decide; it never mixes both. A write returns the updated resource, so clients need not read it back.
+  every outbound call; long CPU-bound work goes to a worker through a queue. Other services are called through
+  the shared client of `app/outbound.py`, never a client created per request.
+- Database connections come from the pools of `app/db.py`, never opened per request. Keep transactions short,
+  and never hold one open while calling another service.
+- A handler that only reads uses `db.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only in
+  any case). A handler that writes uses `db.WriteSession` for all its work, including the reads it needs to
+  decide; it never mixes both. A write returns the updated resource, so clients need not read it back.
 - `GET /healthz` (alive), `GET /readyz` (dependencies reachable, `503` during shutdown) and `GET /metrics`
   (Prometheus) stay at the root path, on `PORT`, outside `/api` and `/internal`.
 - Graceful shutdown on `SIGTERM` within `SHUTDOWN_TIMEOUT_S`: in-flight work completes.
@@ -30,23 +30,23 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
 
 ### API
 
-- Public routes under `/api/v<N>/`, internal routes under `/internal/v<N>/`; only the major version
-  appears in the path.
-- A backward-compatible change (new field, optional parameter or endpoint) stays in the current version.
-  A breaking change opens `/api/v<N+1>/`; the previous version keeps being served, marked `deprecated`
-  with a removal date (`Deprecation` and `Sunset` headers, see `app/deprecation.py`). Nothing breaks in a
-  published version.
+- Public routes under `/api/v<N>/`, internal routes under `/internal/v<N>/`; only the major version appears in
+  the path.
+- A backward-compatible change (new field, optional parameter or endpoint) stays in the current version. A
+  breaking change opens `/api/v<N+1>/`; the previous version keeps being served, marked `deprecated` with a
+  removal date (`Deprecation` and `Sunset` headers, see `app/deprecation.py`). Nothing breaks in a published
+  version.
 - `openapi/public.yaml` follows the code: `python -m app openapi > openapi/public.yaml`.
-- Errors use RFC 9457 (`application/problem+json`); dates are ISO 8601 in UTC; pagination is
-  cursor-based (`limit`, `cursor`, response `items` and `next_cursor`); resource names are plural.
+- Errors use RFC 9457 (`application/problem+json`); dates are ISO 8601 in UTC; pagination is cursor-based
+  (`limit`, `cursor`, response `items` and `next_cursor`); resource names are plural.
 - A `POST` that creates a resource or triggers a side effect requires `Idempotency-Key` (see
   `app/idempotency.py`).
 
 ### Commands
 
-- Install: `uv sync`
+- Install: `uv sync --locked`
 - Lint, format, types: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy .`
-- Tests: `uv run pytest` (SQLite), `TEST_DATABASE_URL=postgresql+asyncpg://… uv run pytest` (PostgreSQL)
+- Tests: `uv run pytest` (SQLite), `TEST_DATABASE_URL=postgresql://… uv run pytest` (PostgreSQL)
 <!-- kanboto:end -->
 
 ## This starter

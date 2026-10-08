@@ -1,0 +1,161 @@
+# Kit CI Kanboto python v4 : ne pas modifier, Kanboto le met à jour par PR.
+name: Kanboto CI · Python (fastapi)
+'on':
+  pull_request: null
+  push:
+    branches:
+    - master
+permissions:
+  contents: read
+concurrency:
+  group: kanboto-ci-python-fastapi-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ci:
+    name: kanboto-ci-python-fastapi
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+        - 5432:5432
+        options: --health-cmd pg_isready --health-interval 2s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://test:test@localhost:5432/test
+    defaults:
+      run:
+        working-directory: fastapi
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - name: Installer uv
+      run: pipx install uv
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: '3.13'
+    - name: Dépendances
+      run: uv sync --locked
+    - name: Lint · uv run ruff check .
+      run: uv run ruff check .
+    - name: Lint · uv run ruff format --check .
+      run: uv run ruff format --check .
+    - name: Lint · uv run mypy .
+      run: uv run mypy .
+    - name: Scan · trivy fs
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+      with:
+        scan-type: fs
+        scan-ref: fastapi
+        scanners: vuln
+        ignore-unfixed: true
+        severity: HIGH,CRITICAL
+        exit-code: '1'
+    - name: Tests · uv run pytest
+      run: uv run pytest
+    - name: Contrat d'API · spec, règles et compatibilité
+      run: |
+        set -euo pipefail
+        spec=openapi/public.yaml
+        if [ ! -f "$spec" ]; then echo "::error title=Contrat d'API::$spec absent"; exit 1; fi
+        yq -o=json "$spec" > /tmp/spec.json
+        python3 - /tmp/spec.json <<'PY'
+        import json, re, sys
+        spec = json.load(open(sys.argv[1]))
+        errors = []
+        for path, item in (spec.get("paths") or {}).items():
+            if not re.match(r"^/(api|internal)/v[0-9]+/", path):
+                errors.append(f"{path} : hors de /api/v<N>/ et /internal/v<N>/")
+            for method, op in item.items():
+                if method not in ("get", "put", "post", "patch", "delete") or not isinstance(op, dict):
+                    continue
+                where = f"{method.upper()} {path}"
+                responses = op.get("responses") or {}
+                problem = any(
+                    (code.startswith(("4", "5")) or code == "default")
+                    and "application/problem+json" in ((r or {}).get("content") or {})
+                    for code, r in responses.items()
+                )
+                if not problem:
+                    errors.append(f"{where} : aucune erreur déclarée en application/problem+json (RFC 9457)")
+                params = op.get("parameters") or []
+                key = any(p.get("in") == "header" and p.get("name", "").lower() == "idempotency-key" for p in params)
+                if method == "post" and "201" in responses and not key:
+                    errors.append(f"{where} : création sans en-tête Idempotency-Key")
+        for error in errors:
+            print(f"::error title=Contrat d'API::{error}")
+        sys.exit(1 if errors else 0)
+        PY
+        tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
+        if [ -n "$tag" ] && git cat-file -e "$tag:./$spec" 2>/dev/null; then
+          git show "$tag:./$spec" > /tmp/published.yaml
+          echo "Compatibilité avec la version publiée $tag"
+          if ! docker run --rm -v "$PWD:/w:ro" -v /tmp:/published:ro tufin/oasdiff@sha256:6263a96dd2ef0726c54e21fea9b8e1607eac4841add0079324b424c1f52b819c \
+            breaking /published/published.yaml "/w/$spec" --fail-on ERR; then
+            echo "::error title=Contrat d'API::changement cassant depuis $tag : ouvrir une nouvelle version de l'API"
+            exit 1
+          fi
+        else
+          echo "Aucune version publiée : compatibilité non vérifiée"
+        fi
+    - name: Image · hadolint
+      run: docker run --rm -i hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d hadolint
+        - < Dockerfile
+    - name: Image · build
+      run: docker build --pull -t kanboto-ci-image .
+    - name: Image · trivy
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+      with:
+        scan-type: image
+        image-ref: kanboto-ci-image
+        scanners: vuln
+        ignore-unfixed: true
+        severity: HIGH,CRITICAL
+        exit-code: '1'
+    - name: Image · contrat d'exécution
+      run: |
+        set -euo pipefail
+        fail() { echo "::error title=Contrat d'exécution::$1"; docker logs app 2>&1 | tail -40 || true; exit 1; }
+        if [ ! -f .env.example ]; then fail ".env.example absent : chaque variable lue doit y figurer"; fi
+        user=$(docker image inspect --format '{{.Config.User}}' kanboto-ci-image)
+        case "$user" in ""|root|0|0:*) fail "l'image tourne en root : déclarer un USER non-root";; esac
+        docker run -d --name app --read-only --tmpfs /tmp --env-file .env.example -e PORT=8080 -p 8080:8080 \
+          kanboto-ci-image >/dev/null
+        code=000
+        for _ in $(seq 1 30); do
+          code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/healthz || true)
+          if [ "$code" = 200 ]; then break; fi
+          if [ "$(docker inspect -f '{{.State.Running}}' app)" != true ]; then
+            fail "le conteneur s'arrête au démarrage (lecture seule, variables de .env.example)"
+          fi
+          sleep 1
+        done
+        if [ "$code" != 200 ]; then fail "/healthz ne répond pas 200 ($code)"; fi
+        code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/readyz || true)
+        case "$code" in 200|503) ;; *) fail "/readyz doit répondre 200 ou 503 ($code)";; esac
+        curl -sf localhost:8080/metrics | grep -q '^# TYPE ' || fail "/metrics ne rend pas le format Prometheus"
+        start=$(date +%s)
+        docker stop -t 30 app >/dev/null
+        elapsed=$(( $(date +%s) - start ))
+        status=$(docker inspect -f '{{.State.ExitCode}}' app)
+        if [ "$elapsed" -ge 30 ]; then fail "SIGTERM ignoré : le conteneur a été tué au bout de 30 s"; fi
+        case "$status" in 0|143) ;; *) fail "code de sortie $status après SIGTERM";; esac
+        docker logs app 2>&1 | python3 -c 'import json, sys
+        bad = []
+        for line in sys.stdin.read().splitlines():
+            if line.strip():
+                try:
+                    json.loads(line)
+                except ValueError:
+                    bad.append(line)
+        if bad:
+            print(f"{len(bad)} ligne(s) de log hors JSON, dont : {bad[0][:200]}")
+        sys.exit(1 if bad else 0)
+        ' || fail "logs hors JSON sur la sortie standard"
+        echo "Contrat d'exécution respecté : arrêt propre en $elapsed s"

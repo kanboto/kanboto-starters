@@ -19,6 +19,7 @@ async def database(tmp_path: Path) -> AsyncIterator[None]:
     PostgreSQL when `TEST_DATABASE_URL` is set (as in CI and production), SQLite otherwise.
     """
     url = os.environ.get("TEST_DATABASE_URL") or f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
+    url = url.replace("postgresql://", "postgresql+asyncpg://", 1)  # plain URL from the CI service
     os.environ["DATABASE_URL"] = url
     for cached in (get_settings, db.engine, db.read_engine, db.sessionmaker, db.read_sessionmaker):
         cached.cache_clear()
