@@ -3,10 +3,11 @@
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Dialect, Integer, String, Text, TypeDecorator, Uuid
+from fastapi import Depends
+from sqlalchemy import DateTime, Dialect, Integer, String, Text, TypeDecorator, Uuid, event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -53,19 +54,22 @@ class IdempotencyKey(Base):
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, index=True)
 
 
-@lru_cache
-def engine() -> AsyncEngine:
-    """Created on first use: the service starts even when the database is down (`/readyz` reports it).
-
-    One engine per process, holding a pool of open connections: a request borrows one for its transaction and
-    gives it back, it never opens its own. Connections and statements are bounded by timeouts, so a stalled
-    database fails requests fast instead of piling them up.
-    """
+def _engine(url: str, *, read_only: bool) -> AsyncEngine:
+    """One engine per process and role, holding a pool of open connections: a request borrows one for its
+    transaction and gives it back, it never opens its own. Connections and statements are bounded by timeouts,
+    so a stalled database fails requests fast instead of piling them up. The read engine refuses writes at
+    the database level."""
     settings = get_settings()
-    if settings.database_url.startswith("sqlite"):  # tests
-        return create_async_engine(settings.database_url)
+    if url.startswith("sqlite"):  # tests
+        engine = create_async_engine(url)
+        if read_only:
+            event.listen(
+                engine.sync_engine, "connect", lambda conn, _: conn.execute("PRAGMA query_only = ON")
+            )
+        return engine
+    server_settings = {"default_transaction_read_only": "on"} if read_only else {}
     return create_async_engine(
-        settings.database_url,
+        url,
         pool_pre_ping=True,
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
@@ -74,8 +78,27 @@ def engine() -> AsyncEngine:
         connect_args={
             "timeout": settings.db_connect_timeout_s,
             "command_timeout": settings.db_statement_timeout_s,
+            "server_settings": server_settings,
         },
     )
+
+
+@lru_cache
+def engine() -> AsyncEngine:
+    """Primary database, for writes. Created on first use: the service starts even when the database is
+    down (`/readyz` reports it)."""
+    return _engine(get_settings().database_url, read_only=False)
+
+
+@lru_cache
+def read_engine() -> AsyncEngine:
+    """Read replica (`DATABASE_READ_URL`), or the primary when there is none, always read-only."""
+    settings = get_settings()
+    return _engine(settings.database_read_url or settings.database_url, read_only=True)
+
+
+def engines() -> list[AsyncEngine]:
+    return [engine(), read_engine()]
 
 
 @lru_cache
@@ -83,6 +106,22 @@ def sessionmaker() -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(engine(), expire_on_commit=False)
 
 
-async def session() -> AsyncIterator[AsyncSession]:
+@lru_cache
+def read_sessionmaker() -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(read_engine(), expire_on_commit=False)
+
+
+async def write_session() -> AsyncIterator[AsyncSession]:
     async with sessionmaker()() as s:
         yield s
+
+
+async def read_session() -> AsyncIterator[AsyncSession]:
+    async with read_sessionmaker()() as s:
+        yield s
+
+
+# Reads go to `ReadSession`. Writes, and reads that must see a write just made (a replica lags slightly
+# behind), go to `WriteSession`. Never both in one transaction.
+WriteSession = Annotated[AsyncSession, Depends(write_session)]
+ReadSession = Annotated[AsyncSession, Depends(read_session)]

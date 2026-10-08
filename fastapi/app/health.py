@@ -32,8 +32,10 @@ async def readyz(response: Response) -> dict[str, str]:
         response.status_code = 503
         return {"status": "stopping"}
     try:
-        async with asyncio.timeout(get_settings().ready_timeout_s), db.engine().connect() as connection:
-            await connection.execute(text("SELECT 1"))
+        async with asyncio.timeout(get_settings().ready_timeout_s):
+            for engine in db.engines():
+                async with engine.connect() as connection:
+                    await connection.execute(text("SELECT 1"))
     except Exception as exc:  # a database outage makes the instance unready, it does not kill it
         log.warning("database unreachable", extra={"error": str(exc)})
         response.status_code = 503

@@ -20,7 +20,7 @@ async def database(tmp_path: Path) -> AsyncIterator[None]:
     """
     url = os.environ.get("TEST_DATABASE_URL") or f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
     os.environ["DATABASE_URL"] = url
-    for cached in (get_settings, db.engine, db.sessionmaker):
+    for cached in (get_settings, db.engine, db.read_engine, db.sessionmaker, db.read_sessionmaker):
         cached.cache_clear()
     # `migrations/env.py` runs its own event loop: keep it out of the test's.
     config = Config("alembic.ini")
@@ -28,7 +28,8 @@ async def database(tmp_path: Path) -> AsyncIterator[None]:
         await asyncio.to_thread(command.downgrade, config, "base")
     await asyncio.to_thread(command.upgrade, config, "head")
     yield
-    await db.engine().dispose()
+    for engine in db.engines():
+        await engine.dispose()
 
 
 @pytest.fixture

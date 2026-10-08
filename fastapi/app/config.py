@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     port: int = 8080
     database_url: str
+    database_read_url: str | None = None  # read replica; the primary when unset
     log_level: str = "INFO"
 
     # Database: every call is bounded, and the pool is sized per instance.

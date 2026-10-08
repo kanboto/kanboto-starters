@@ -1,20 +1,17 @@
 """Example resource showing the API conventions: replace it with your domain's resources."""
 
 from datetime import datetime
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import db, idempotency, metrics, pagination
 from app.errors import RESPONSES
 
 router = APIRouter(prefix="/items", tags=["items"], responses=RESPONSES)
-Session = Annotated[AsyncSession, Depends(db.session)]
 
 
 class ItemIn(BaseModel):
@@ -33,7 +30,7 @@ def _out(item: db.Item) -> ItemOut:
 
 @router.get("", response_model=pagination.Page[ItemOut])
 async def list_items(
-    session: Session, limit: pagination.Limit = 20, cursor: pagination.Cursor = None
+    session: db.ReadSession, limit: pagination.Limit = 20, cursor: pagination.Cursor = None
 ) -> pagination.Page[ItemOut]:
     query = select(db.Item).order_by(db.Item.created_at, db.Item.id).limit(limit + 1)
     if cursor:
@@ -48,7 +45,7 @@ async def list_items(
 
 
 @router.get("/{item_id}", response_model=ItemOut)
-async def get_item(item_id: UUID, session: Session) -> ItemOut:
+async def get_item(item_id: UUID, session: db.ReadSession) -> ItemOut:
     item = await session.get(db.Item, item_id)
     if item is None:
         raise HTTPException(404, "item not found")
@@ -56,7 +53,7 @@ async def get_item(item_id: UUID, session: Session) -> ItemOut:
 
 
 @router.post("", status_code=201, response_model=ItemOut)
-async def create_item(body: ItemIn, key: idempotency.KeyHeader, session: Session) -> JSONResponse:
+async def create_item(body: ItemIn, key: idempotency.KeyHeader, session: db.WriteSession) -> JSONResponse:
     async def create() -> tuple[int, object]:
         item = db.Item(name=body.name, created_at=db.utcnow())
         session.add(item)

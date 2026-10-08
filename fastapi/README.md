@@ -51,6 +51,7 @@ All configuration comes from environment variables.
 |---|---|---|
 | `PORT` | `8080` | Port for the API, the probes and the metrics |
 | `DATABASE_URL` | required | PostgreSQL URL, e.g. `postgresql+asyncpg://user:pass@host:5432/db` |
+| `DATABASE_READ_URL` | unset | Read replica URL; reads go to the primary when unset |
 | `LOG_LEVEL` | `INFO` | Log level |
 | `DB_CONNECT_TIMEOUT_S` | `3` | Timeout to open a database connection |
 | `DB_STATEMENT_TIMEOUT_S` | `10` | Timeout for a single SQL statement |
@@ -65,8 +66,9 @@ All configuration comes from environment variables.
 | `MAX_BODY_BYTES` | `1048576` | Largest request body accepted (`413` beyond) |
 | `IDEMPOTENCY_TTL_S` | `86400` | How long idempotency keys are kept |
 
-Size the pool so that `instances × (DB_POOL_SIZE + DB_MAX_OVERFLOW)` stays under the database's
-connection limit. After `SIGTERM`, the process exits within `DRAIN_DELAY_S + SHUTDOWN_TIMEOUT_S`.
+Reads and writes use separate pools: `db.ReadSession` for reads, read-only at the database level, and
+`db.WriteSession` for writes. Pool settings apply to each. Size them so that
+`instances × 2 × (DB_POOL_SIZE + DB_MAX_OVERFLOW)` stays under the database's connection limit. After `SIGTERM`, the process exits within `DRAIN_DELAY_S + SHUTDOWN_TIMEOUT_S`.
 
 ## Container image
 

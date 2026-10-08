@@ -19,7 +19,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
     # SIGTERM received: uvicorn stops accepting connections and drains in-flight ones (SHUTDOWN_TIMEOUT_S).
     health.State.stopping = True
-    await db.engine().dispose()
+    for engine in db.engines():
+        await engine.dispose()
     log.info("stopped")
 
 

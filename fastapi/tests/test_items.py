@@ -41,3 +41,15 @@ async def test_cursor_pagination(client: AsyncClient) -> None:
             break
     assert seen == names
     assert (await client.get("/api/v1/items", params={"cursor": "%%%"})).status_code == 400
+
+
+async def test_read_session_refuses_writes() -> None:
+    import pytest
+    from sqlalchemy.exc import DBAPIError
+
+    from app import db
+
+    async with db.read_sessionmaker()() as session:
+        session.add(db.Item(name="interdit"))
+        with pytest.raises(DBAPIError):
+            await session.commit()
