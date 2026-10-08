@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     drain_delay_s: float = 5
     shutdown_timeout_s: int = 20
 
+    # Outbound HTTP: one shared client, every call bounded.
+    http_connect_timeout_s: float = 3
+    http_timeout_s: float = 10
+    http_max_connections: int = 100
+
+    # Browser origins allowed to call the API (comma-separated); none when empty.
+    cors_origins: str = ""
+
     # Proxies trusted for X-Forwarded-* headers (comma-separated IPs or CIDRs).
     forwarded_allow_ips: str = "127.0.0.1"
     max_body_bytes: int = 1_048_576

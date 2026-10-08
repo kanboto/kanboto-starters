@@ -11,12 +11,12 @@ dependencies = [
     "asyncpg>=0.32,<1",
     "alembic>=1.20,<2",
     "prometheus-client>=0.26,<1",
+    "httpx>=0.28,<1",
 ]
 
 [dependency-groups]
 dev = [
     "aiosqlite>=0.22,<1",
-    "httpx>=0.28,<1",
     "mypy>=2.4,<3",
     "pytest>=9.1,<10",
     "pytest-asyncio>=1.4,<2",

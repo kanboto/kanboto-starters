@@ -12,7 +12,9 @@ COPY migrations ./migrations
 COPY alembic.ini ./
 
 FROM python:3.13-slim@sha256:bf44cdfcb76cd3b41e879bc058fc37ec5872002ccfde7fcb765e218cde0cd79c
-RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
+# pip is not needed at runtime: removing it shrinks the attack surface.
+RUN python -m pip uninstall --yes --quiet pip \
+    && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY --from=build --chown=root:root /app /app
 ENV PATH=/app/.venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1

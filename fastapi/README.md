@@ -54,7 +54,7 @@ All configuration comes from environment variables.
 | `DATABASE_READ_URL` | unset | Read replica URL; reads go to the primary when unset |
 | `LOG_LEVEL` | `INFO` | Log level |
 | `DB_CONNECT_TIMEOUT_S` | `3` | Timeout to open a database connection |
-| `DB_STATEMENT_TIMEOUT_S` | `10` | Timeout for a single SQL statement |
+| `DB_STATEMENT_TIMEOUT_S` | `10` | Timeout for a single SQL statement, cancelled by the server |
 | `DB_POOL_SIZE` | `5` | Connections kept open per instance |
 | `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per instance |
 | `DB_POOL_TIMEOUT_S` | `5` | Wait for a free connection before failing the request |
@@ -62,6 +62,10 @@ All configuration comes from environment variables.
 | `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
 | `DRAIN_DELAY_S` | `5` | After `SIGTERM`, time readiness fails while traffic is still served |
 | `SHUTDOWN_TIMEOUT_S` | `20` | Then, grace period for in-flight requests |
+| `HTTP_CONNECT_TIMEOUT_S` | `3` | Outbound HTTP: timeout to connect |
+| `HTTP_TIMEOUT_S` | `10` | Outbound HTTP: timeout for a call |
+| `HTTP_MAX_CONNECTIONS` | `100` | Outbound HTTP: connections kept per instance |
+| `CORS_ORIGINS` | empty | Browser origins allowed to call the API, comma-separated; CORS is off when empty |
 | `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Proxies trusted for `X-Forwarded-*` headers (IPs or CIDRs) |
 | `MAX_BODY_BYTES` | `1048576` | Largest request body accepted (`413` beyond) |
 | `IDEMPOTENCY_TTL_S` | `86400` | How long idempotency keys are kept |
@@ -82,7 +86,7 @@ The same image runs the other commands:
 
 | Command | When | Purpose |
 |---|---|---|
-| `python -m app migrate` | before starting a new version | Apply pending migrations; the service never migrates at startup |
+| `python -m app migrate` | before starting a new version | Apply pending migrations, one run at a time; the service never migrates at startup |
 | `python -m app cleanup` | periodically, e.g. hourly | Delete expired idempotency keys |
 
 ## Endpoints
@@ -107,6 +111,7 @@ app/
 ├── api/v1/          Version 1 of the public API (items is an example resource)
 ├── health.py        Liveness and readiness probes
 ├── middleware.py    Request id, access log, body limit, security headers
+├── outbound.py      Shared HTTP client for calls to other services
 ├── metrics.py       Prometheus metrics
 ├── deprecation.py   Deprecation and Sunset headers for an old API version
 ├── logs.py          JSON logging

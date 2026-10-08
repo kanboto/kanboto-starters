@@ -68,7 +68,10 @@ def _engine(url: str, *, read_only: bool) -> AsyncEngine:
                 engine.sync_engine, "connect", lambda conn, _: conn.execute("PRAGMA query_only = ON")
             )
         return engine
-    server_settings = {"default_transaction_read_only": "on"} if read_only else {}
+    # Enforced by the server too: a statement over the timeout is cancelled, not just abandoned by the client.
+    server_settings = {"statement_timeout": str(int(settings.db_statement_timeout_s * 1000))}
+    if read_only:
+        server_settings["default_transaction_read_only"] = "on"
     return create_async_engine(
         url,
         pool_pre_ping=True,
@@ -78,7 +81,8 @@ def _engine(url: str, *, read_only: bool) -> AsyncEngine:
         pool_recycle=settings.db_pool_recycle_s,
         connect_args={
             "timeout": settings.db_connect_timeout_s,
-            "command_timeout": settings.db_statement_timeout_s,
+            # The server cancels first (statement_timeout); the client gives up one second later at most.
+            "command_timeout": settings.db_statement_timeout_s + 1,
             "server_settings": server_settings,
         },
     )

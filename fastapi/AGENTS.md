@@ -14,7 +14,8 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
 - Stateless: nothing is written outside `/tmp` (the image runs on a read-only filesystem); sessions, files
   and caches live in an external service. Several instances run side by side.
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
-  every outbound call; long CPU-bound work goes to a worker through a queue.
+  every outbound call; long CPU-bound work goes to a worker through a queue. Other services are called
+  through the shared client of `app/outbound.py`, never a client created per request.
 - Database connections come from the pools of `app/db.py`, never opened per request. Keep transactions
   short, and never hold one open while calling another service.
 - A handler that only reads uses `db.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only
@@ -53,5 +54,6 @@ The CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them do
 - `app/main.py` assembles the application; `app/api/v1/` holds version 1 of the API. `items` is an example
   resource: replace it with your domain's, keeping its conventions.
 - `app/health.py`, `app/middleware.py`, `app/metrics.py`, `app/logs.py`, `app/errors.py`,
-  `app/idempotency.py`, `app/pagination.py` and `app/deprecation.py` implement the contracts; keep them.
+  `app/idempotency.py`, `app/pagination.py`, `app/deprecation.py` and `app/outbound.py` implement the
+  contracts; keep them.
 - Every database call goes through `app/db.py`, whose engine bounds connections and statements by timeouts.

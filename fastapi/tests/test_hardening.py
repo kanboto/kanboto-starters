@@ -81,3 +81,38 @@ def test_sigterm_drains_before_stopping(monkeypatch: pytest.MonkeyPatch) -> None
     time.sleep(0.2)
     assert server.should_exit
     health.State.stopping = False
+
+
+async def test_cors_only_for_configured_origins(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.main import create_app
+
+    monkeypatch.setattr(get_settings(), "cors_origins", "https://app.example.com")
+    preflight = {"Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "idempotency-key"}
+    async with AsyncClient(transport=ASGITransport(app=create_app()), base_url="http://t") as c:
+        allowed = await c.options("/api/v1/items", headers={"Origin": "https://app.example.com", **preflight})
+        other = await c.options("/api/v1/items", headers={"Origin": "https://evil.example.com", **preflight})
+    assert allowed.headers["access-control-allow-origin"] == "https://app.example.com"
+    assert "access-control-allow-origin" not in other.headers
+
+
+async def test_outbound_client_is_bounded_and_forwards_request_id() -> None:
+    import httpx
+
+    from app import logs, outbound
+
+    seen: list[httpx.Request] = []
+    http = outbound.client()
+    assert http.timeout.read == get_settings().http_timeout_s and http.timeout.connect == 3
+
+    def record(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200)
+
+    http._transport = httpx.MockTransport(record)
+    token = logs.request_id.set("rid-42")
+    try:
+        await http.get("http://billing/api/v1/quotes/1")
+    finally:
+        logs.request_id.reset(token)
+        await http.aclose()
+    assert seen[0].headers["x-request-id"] == "rid-42"
