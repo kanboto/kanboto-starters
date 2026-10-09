@@ -22,6 +22,27 @@ CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does n
 - JSON logs on stdout, one line per event.
 - Multi-stage image, non-root user, base images pinned by digest.
 
+### Code
+
+Rules in priority order: when two conflict, the first one wins.
+
+1. **Correct first.** The code does what the ticket asks, and its tests prove it.
+2. **Simplest that works (KISS, YAGNI).** No abstraction, option, layer or setting for a need that does not
+   exist yet. Three plain lines beat a clever helper.
+3. **Search before you write (DRY).** Reuse the repository's existing functions, models and helpers. Extract a
+   shared function when the same rule appears a third time, not before: duplication is cheaper than the wrong
+   abstraction. A business rule is written once.
+4. **One reason to change (single responsibility).** A function does one thing and is named after it; a module
+   holds one concern. Split a function when it needs a comment to separate its steps.
+5. **Abstractions earn their place (SOLID, pragmatically).** An interface, base class or factory only when two
+   implementations exist, or a test must substitute one. Prefer plain functions and composition to
+   inheritance. Pass dependencies in (arguments, framework dependency injection) rather than reaching for
+   globals from business code.
+6. **The repository's conventions first.** Structure, naming, error handling and test style follow what is
+   already there. A new convention is a decision: say so in the pull request description.
+7. **Nothing dead.** No commented-out code, no unused function or parameter, no TODO without a ticket.
+   Comments explain why, never what the code already says.
+
 ### Commands
 
 - Install: `npm ci`
