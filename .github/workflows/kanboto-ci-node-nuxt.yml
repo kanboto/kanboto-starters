@@ -1,4 +1,4 @@
-# Kit CI Kanboto node v4 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit CI Kanboto node v5 : ne pas modifier, Kanboto le met à jour par PR.
 name: Kanboto CI · Node.js (nuxt)
 'on':
   pull_request: null
@@ -34,32 +34,25 @@ jobs:
     - name: Lint · npm run typecheck
       run: npm run typecheck
     - name: Scan · trivy fs
-      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
-      with:
-        scan-type: fs
-        scan-ref: nuxt
-        scanners: vuln
-        ignore-unfixed: true
-        severity: HIGH,CRITICAL
-        exit-code: '1'
+      run: |
+        docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" -w /src -v "$RUNNER_TEMP/trivy:/cache" \
+          ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
+          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 nuxt
     - name: Tests · npm test
       run: npm test
     - name: Build · npm run build
       run: npm run build
     - name: Image · hadolint
-      run: docker run --rm -i hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d hadolint
-        - < Dockerfile
+      run: docker run --rm -i ghcr.io/kanboto/hadolint:stable hadolint - < Dockerfile
     - name: Image · build
       run: docker build --pull -t kanboto-ci-image .
     - name: Image · trivy
-      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
-      with:
-        scan-type: image
-        image-ref: kanboto-ci-image
-        scanners: vuln
-        ignore-unfixed: true
-        severity: HIGH,CRITICAL
-        exit-code: '1'
+      run: |
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy:/cache" \
+          ghcr.io/kanboto/trivy:stable image --cache-dir /cache --skip-version-check \
+          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 kanboto-ci-image
     - name: Image · contrat d'exécution
       run: |
         set -euo pipefail

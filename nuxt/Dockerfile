@@ -1,6 +1,7 @@
-# Production image: multi-stage, the built server only, non-root user, base images pinned by digest.
+# Production image: multi-stage, the built server only, non-root user, runtime image pinned by digest.
+# Build stage from Kanboto's mirror of Docker Hub's node image (digest recorded in GHCR.md).
 # Distroless runtime: Node.js 24, no shell, no package manager.
-FROM node:24-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS build
+FROM ghcr.io/kanboto/node:24-trixie-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Dependencies' install scripts stay off (see `allowScripts`); `nuxt build` prepares the project itself.

@@ -1,0 +1,66 @@
+name: Mirror images
+'on':
+  schedule:
+  - cron: '23 2 * * *'
+  workflow_dispatch: null
+permissions:
+  contents: write
+  packages: write
+concurrency:
+  group: mirror-images
+  cancel-in-progress: false
+jobs:
+  mirror:
+    name: mirror-images
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MIRROR: ghcr.io/kanboto
+      CRANE_VERSION: v0.22.1
+      CRANE_SHA256: 0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
+      # One image per line: <source> <mirror name:tag> [<GitHub repository whose latest release is the tool's tag>]
+      IMAGES: |
+        ghcr.io/hadolint/hadolint            hadolint:stable  hadolint/hadolint
+        ghcr.io/aquasecurity/trivy           trivy:stable     aquasecurity/trivy
+        ghcr.io/aquasecurity/trivy-db:2      trivy-db:2
+        ghcr.io/aquasecurity/trivy-checks:2  trivy-checks:2
+        tufin/oasdiff                        oasdiff:stable   oasdiff/oasdiff
+        postgres:17-alpine                   postgres:17-alpine
+        node:24-trixie-slim                  node:24-trixie-slim
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Install crane
+      run: |
+        set -euo pipefail
+        curl -fsSL --retry 3 -o "$RUNNER_TEMP/crane.tar.gz" \
+          "https://github.com/google/go-containerregistry/releases/download/$CRANE_VERSION/go-containerregistry_Linux_x86_64.tar.gz"
+        echo "$CRANE_SHA256  $RUNNER_TEMP/crane.tar.gz" | sha256sum -c -
+        mkdir -p "$RUNNER_TEMP/bin"
+        tar -xzf "$RUNNER_TEMP/crane.tar.gz" -C "$RUNNER_TEMP/bin" crane
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+    - name: Log in to ghcr.io
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: echo "$GITHUB_TOKEN" | crane auth login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+    - name: Mirror
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: .github/mirror-images.sh
+    - name: Commit GHCR.md
+      if: ${{ !cancelled() }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Pushed with GITHUB_TOKEN: GitHub starts no workflow on this push, so the kits do not run again.
+      run: |
+        set -euo pipefail
+        if [ ! -f GHCR.md ]; then exit 0; fi
+        git add GHCR.md
+        if git diff --cached --quiet; then echo "GHCR.md unchanged"; exit 0; fi
+        git -c user.name='github-actions[bot]' \
+          -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+          commit -m "Mirrored images: update GHCR.md"
+        auth=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)
+        echo "::add-mask::$auth"
+        git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "HEAD:$GITHUB_REF_NAME"

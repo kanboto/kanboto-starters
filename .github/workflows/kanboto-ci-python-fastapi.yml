@@ -1,4 +1,4 @@
-# Kit CI Kanboto python v4 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit CI Kanboto python v5 : ne pas modifier, Kanboto le met à jour par PR.
 name: Kanboto CI · Python (fastapi)
 'on':
   pull_request: null
@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 30
     services:
       postgres:
-        image: postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        image: ghcr.io/kanboto/postgres:17-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -49,14 +49,11 @@ jobs:
     - name: Lint · uv run mypy .
       run: uv run mypy .
     - name: Scan · trivy fs
-      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
-      with:
-        scan-type: fs
-        scan-ref: fastapi
-        scanners: vuln
-        ignore-unfixed: true
-        severity: HIGH,CRITICAL
-        exit-code: '1'
+      run: |
+        docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" -w /src -v "$RUNNER_TEMP/trivy:/cache" \
+          ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
+          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 fastapi
     - name: Tests · uv run pytest
       run: uv run pytest
     - name: Contrat d'API · spec, règles et compatibilité
@@ -96,7 +93,7 @@ jobs:
         if [ -n "$tag" ] && git cat-file -e "$tag:./$spec" 2>/dev/null; then
           git show "$tag:./$spec" > /tmp/published.yaml
           echo "Compatibilité avec la version publiée $tag"
-          if ! docker run --rm -v "$PWD:/w:ro" -v /tmp:/published:ro tufin/oasdiff@sha256:6263a96dd2ef0726c54e21fea9b8e1607eac4841add0079324b424c1f52b819c \
+          if ! docker run --rm -v "$PWD:/w:ro" -v /tmp:/published:ro ghcr.io/kanboto/oasdiff:stable \
             breaking /published/published.yaml "/w/$spec" --fail-on ERR; then
             echo "::error title=Contrat d'API::changement cassant depuis $tag : ouvrir une nouvelle version de l'API"
             exit 1
@@ -105,19 +102,15 @@ jobs:
           echo "Aucune version publiée : compatibilité non vérifiée"
         fi
     - name: Image · hadolint
-      run: docker run --rm -i hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d hadolint
-        - < Dockerfile
+      run: docker run --rm -i ghcr.io/kanboto/hadolint:stable hadolint - < Dockerfile
     - name: Image · build
       run: docker build --pull -t kanboto-ci-image .
     - name: Image · trivy
-      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
-      with:
-        scan-type: image
-        image-ref: kanboto-ci-image
-        scanners: vuln
-        ignore-unfixed: true
-        severity: HIGH,CRITICAL
-        exit-code: '1'
+      run: |
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy:/cache" \
+          ghcr.io/kanboto/trivy:stable image --cache-dir /cache --skip-version-check \
+          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 kanboto-ci-image
     - name: Image · contrat d'exécution
       run: |
         set -euo pipefail
