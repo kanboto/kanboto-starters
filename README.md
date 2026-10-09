@@ -12,8 +12,9 @@ use when they scaffold a new component.
 |---|---|---|
 | FastAPI (Python 3.13, uv) | HTTP API | [`fastapi/`](fastapi/) |
 | TaskIQ + NATS JetStream (Python 3.13, uv) | Background worker | [`taskiq/`](taskiq/) |
+| Nuxt (Node.js 24, npm) | Web frontend, rendered on the server (SSR) | [`nuxt/`](nuxt/) |
 
-More stacks are on the way: Nuxt, Spring Boot, Quarkus and Go.
+More stacks are on the way: a static Vue.js frontend next, then Spring Boot, Quarkus and Go.
 
 ## Standards
 
