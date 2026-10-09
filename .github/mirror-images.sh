@@ -28,12 +28,14 @@ with_retry() {
   return 1
 }
 
+# The tag of a repository's latest release (pre-releases and drafts excluded), from the public redirect of
+# github.com/<repo>/releases/latest: no API call, so neither a token nor the API rate limit is involved.
 latest_release() {
-  local auth=()
-  if [ -n "${GITHUB_TOKEN:-}" ]; then auth=(-H "Authorization: Bearer $GITHUB_TOKEN"); fi
-  curl -fsSL "${auth[@]}" -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/$1/releases/latest" |
-    python3 -c 'import json, sys; print(json.load(sys.stdin)["tag_name"])'
+  local tag
+  tag=$(curl -fsSI "https://github.com/$1/releases/latest" |
+    awk 'tolower($1) == "location:" { print $2 }' | tr -d '\r' | awk -F/ '{ print $NF }')
+  case "$tag" in "" | latest) echo "no release found for $1" >&2; return 1 ;; esac
+  echo "$tag"
 }
 
 # The image tag of a release: as is (`v2.15.1`), or without its leading `v` (`0.75.0`).
