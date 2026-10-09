@@ -6,7 +6,7 @@
 import { format } from 'node:util'
 import type { H3Event } from 'h3'
 import { useEvent } from 'nitropack/runtime'
-import { context, log } from '../lib/log'
+import { context, logger } from '../lib/log'
 import type { Level } from '../lib/settings'
 import { UNTRACKED, observe, route } from '../lib/metrics'
 
@@ -30,6 +30,10 @@ function internal(event: H3Event): boolean {
   return '__unenv__' in event.node.req
 }
 
+const appLog = logger('app')
+const accessLog = logger('access')
+const consoleLog = logger('console')
+
 function redirectConsole(): void {
   const levels: Record<'debug' | 'log' | 'info' | 'warn' | 'error', Level> = {
     debug: 'debug',
@@ -43,7 +47,7 @@ function redirectConsole(): void {
       const error = args.find(arg => arg instanceof Error)
       const message = format(...args.filter(arg => arg !== error)).trim() || String(error?.message ?? '')
       if (SKIPPED.some(prefix => message.startsWith(prefix))) return
-      log(level, 'console', message, { error })
+      consoleLog[level](message, { error })
     }
   }
 }
@@ -68,8 +72,8 @@ export default defineNitroPlugin((nitroApp) => {
       // 499: the client went away before the response was complete.
       const status = response.writableFinished ? response.statusCode : 499
       const label = route(event, status)
-      observe(event.method, label, status, seconds)
-      log('info', 'access', 'request', {
+      observe({ method: event.method, route: label, status }, seconds)
+      accessLog.info('request', {
         request_id: requestId,
         method: event.method,
         route: label,
@@ -84,7 +88,7 @@ export default defineNitroPlugin((nitroApp) => {
     if (status < 500) return // a 404 is an answer, not a failure: the request line records it
     // h3 wraps what a handler throws: log the original error, its stack points at the faulty code.
     const cause = (error as { cause?: unknown }).cause
-    log('error', 'app', 'request failed', {
+    appLog.error('request failed', {
       request_id: event?.context.requestId,
       method: event?.method,
       route: event ? route(event, status) : undefined,

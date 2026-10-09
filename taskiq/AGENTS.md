@@ -52,7 +52,8 @@ Rules in priority order: when two conflict, the first one wins.
 ### Commands
 
 - Install: `uv sync --locked`
-- Lint, format, types: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy .`
+- Lint, format, types: `uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915`,
+  `uv run ruff format --check .`, `uv run mypy .`
 - Tests: `uv run pytest`
 <!-- kanboto:end -->
 

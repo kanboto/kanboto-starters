@@ -1,4 +1,4 @@
-# Kit CI Kanboto python v5 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit CI Kanboto python v6 : ne pas modifier, Kanboto le met à jour par PR.
 name: Kanboto CI · Python (fastapi)
 'on':
   pull_request: null
@@ -42,12 +42,14 @@ jobs:
         python-version: '3.13'
     - name: Dépendances
       run: uv sync --locked
-    - name: Lint · uv run ruff check .
-      run: uv run ruff check .
+    - name: Lint · uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915
+      run: uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915
     - name: Lint · uv run ruff format --check .
       run: uv run ruff format --check .
     - name: Lint · uv run mypy .
       run: uv run mypy .
+    - name: Duplication · jscpd
+      run: npx --yes jscpd@5.4.1 . --ignore "**/openapi/public.yaml,**/package-lock.json,**/pnpm-lock.yaml,**/yarn.lock,**/bun.lock,**/poetry.lock,**/uv.lock,**/pdm.lock,**/Pipfile.lock,**/.terraform.lock.hcl"
     - name: Scan · trivy fs
       run: |
         docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" -w /src -v "$RUNNER_TEMP/trivy:/cache" \

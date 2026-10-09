@@ -45,7 +45,9 @@ export function route(event: H3Event, status: number): string {
   return !matched && status < 400 ? 'static' : 'unmatched'
 }
 
-export function observe(method: string, route: string, status: number, seconds: number): void {
+export interface Request { method: string, route: string, status: number }
+
+export function observe({ method, route, status }: Request, seconds: number): void {
   duration.labels(method, route).observe(seconds)
   requests.labels(method, route, String(status)).inc()
 }

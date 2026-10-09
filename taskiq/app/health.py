@@ -28,20 +28,28 @@ def _json(status: int, body: dict[str, str]) -> tuple[int, bytes, str]:
     return status, json.dumps(body).encode(), JSON
 
 
-def _respond(method: str, path: str) -> tuple[int, bytes, str]:
-    if path not in ("/healthz", "/readyz", "/metrics"):
-        return _json(404, {"status": "not found"})
-    if method not in ("GET", "HEAD"):
-        return _json(405, {"status": "method not allowed"})
-    if path == "/healthz":
-        return _json(200, {"status": "ok"})
-    if path == "/metrics":
-        return 200, *metrics.exposition()
+def _ready() -> tuple[int, bytes, str]:
     if State.stopping:
         return _json(503, {"status": "stopping"})
     if State.connected is None or not State.connected():
         return _json(503, {"status": "unavailable"})
     return _json(200, {"status": "ok"})
+
+
+ROUTES: dict[str, Callable[[], tuple[int, bytes, str]]] = {
+    "/healthz": lambda: _json(200, {"status": "ok"}),
+    "/readyz": _ready,
+    "/metrics": lambda: (200, *metrics.exposition()),
+}
+
+
+def _respond(method: str, path: str) -> tuple[int, bytes, str]:
+    route = ROUTES.get(path)
+    if route is None:
+        return _json(404, {"status": "not found"})
+    if method not in ("GET", "HEAD"):
+        return _json(405, {"status": "method not allowed"})
+    return route()
 
 
 async def app(scope: Scope, receive: Receive, send: Send) -> None:

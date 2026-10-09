@@ -7,7 +7,7 @@ describe('log entry', () => {
   it('carries the request id and fields, and an error with its stack', () => {
     context.requestId = () => 'r1'
     try {
-      const line = entry('error', 'app', 'request failed', { route: '/', error: new TypeError('boom') })
+      const line = entry({ level: 'error', logger: 'app', message: 'request failed' }, { route: '/', error: new TypeError('boom') })
       expect(JSON.parse(JSON.stringify(line))).toMatchObject({
         level: 'error',
         logger: 'app',

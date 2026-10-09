@@ -13,11 +13,13 @@
  * set here, from this application's variables, and are not meant to be set by hand.
  */
 import { lifecycle } from '../lib/lifecycle'
-import { log } from '../lib/log'
+import { logger } from '../lib/log'
 import { settings } from '../lib/settings'
 
 /** A process event, not a signal: Nitro's shutdown is bound to it, and it is emitted once the drain is over. */
 const DRAINED = 'drained'
+
+const appLog = logger('app')
 
 export default defineNitroPlugin((nitroApp) => {
   if (import.meta.dev) return
@@ -34,17 +36,17 @@ export default defineNitroPlugin((nitroApp) => {
     lifecycle.stopping = true
     if (stopped) return
     stopped = true
-    log('info', 'app', 'stopping', { signal, timeout_s: settings.shutdownTimeoutS })
+    appLog.info('stopping', { signal, timeout_s: settings.shutdownTimeoutS })
     if (signal === 'SIGTERM') process.emit(DRAINED, signal)
   }
 
   process.on('SIGTERM', () => {
     if (lifecycle.stopping) return stop('SIGTERM')
     lifecycle.stopping = true
-    log('info', 'app', 'draining', { delay_s: settings.drainDelayS })
+    appLog.info('draining', { delay_s: settings.drainDelayS })
     timer = setTimeout(stop, settings.drainDelayS * 1000, 'SIGTERM')
   })
   process.on('SIGINT', () => stop('SIGINT'))
 
-  nitroApp.hooks.hook('close', () => log('info', 'app', 'stopped'))
+  nitroApp.hooks.hook('close', () => appLog.info('stopped'))
 })

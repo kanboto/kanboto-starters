@@ -1,4 +1,4 @@
-# Kit CI Kanboto node v5 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit CI Kanboto node v6 : ne pas modifier, Kanboto le met à jour par PR.
 name: Kanboto CI · Node.js (nuxt)
 'on':
   pull_request: null
@@ -33,6 +33,8 @@ jobs:
       run: npm run lint
     - name: Lint · npm run typecheck
       run: npm run typecheck
+    - name: Duplication · jscpd
+      run: npx --yes jscpd@5.4.1 . --ignore "**/openapi/public.yaml,**/package-lock.json,**/pnpm-lock.yaml,**/yarn.lock,**/bun.lock,**/poetry.lock,**/uv.lock,**/pdm.lock,**/Pipfile.lock,**/.terraform.lock.hcl"
     - name: Scan · trivy fs
       run: |
         docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" -w /src -v "$RUNNER_TEMP/trivy:/cache" \
