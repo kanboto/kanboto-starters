@@ -82,6 +82,9 @@ docker build -t starter-fastapi .
 docker run --read-only --tmpfs /tmp --env-file .env.example -p 8080:8080 starter-fastapi
 ```
 
+The image is distroless (`gcr.io/distroless/python3-debian13`): Python 3.13 and its libraries, no shell and no
+package manager, running as the non-root `nonroot` user (uid 65532). The image runs on a read-only filesystem.
+
 The same image runs the other commands:
 
 | Command | When | Purpose |

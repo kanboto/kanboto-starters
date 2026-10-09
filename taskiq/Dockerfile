@@ -11,8 +11,6 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN ["uv", "sync", "--locked", "--no-dev", "--no-install-project"]
 COPY app ./app
-COPY migrations ./migrations
-COPY alembic.ini ./
 
 FROM gcr.io/distroless/python3-debian13:nonroot@sha256:83aa8d4f74a4d7f7cf2d472054139bef71a927b76c680c0f2e1021d6b1d6d732
 WORKDIR /app
@@ -22,4 +20,4 @@ ENV PATH=/app/.venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 USER 65532
 EXPOSE 8080
 ENTRYPOINT ["/app/.venv/bin/python", "-m", "app"]
-CMD ["serve"]
+CMD ["worker"]

@@ -11,8 +11,9 @@ use when they scaffold a new component.
 | Stack | Kind | Path |
 |---|---|---|
 | FastAPI (Python 3.13, uv) | HTTP API | [`fastapi/`](fastapi/) |
+| TaskIQ + NATS JetStream (Python 3.13, uv) | Background worker | [`taskiq/`](taskiq/) |
 
-More stacks are on the way: Node.js API and worker, Python worker, Nuxt, Spring Boot, Quarkus and Go.
+More stacks are on the way: Nuxt, Spring Boot, Quarkus and Go.
 
 ## Standards
 
@@ -26,7 +27,8 @@ Every starter ships with the same guarantees, checked by its CI on every pull re
 - `/healthz`, `/readyz` and `/metrics` (Prometheus) at the root path, on the application port.
 - Graceful shutdown on `SIGTERM`: readiness fails first, in-flight requests complete.
 - Structured JSON logs on stdout, with a request id on every line.
-- Multi-stage image, non-root user, base images pinned by digest.
+- Multi-stage image, non-root user, base images pinned by digest; distroless runtime (no shell, no package
+  manager) where the stack allows it.
 
 **API**
 
