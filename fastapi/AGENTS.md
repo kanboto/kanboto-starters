@@ -63,6 +63,19 @@ Rules in priority order: when two conflict, the first one wins.
 - A `POST` that creates a resource or triggers a side effect requires `Idempotency-Key` (see
   `app/idempotency.py`).
 
+### Database
+
+- Every schema change is backward compatible with the code currently in production: old and new versions run
+  side by side during a deploy, and a rollback keeps the migrated schema.
+- Breaking changes go through expand/contract, in separate pull requests.
+- Expand: add only (new column nullable or with a default, new table, index built without locking the table).
+- Migrate: the code writes both shapes and reads the new one; large backfills run in batches, outside the
+  migration.
+- Contract: drop or rename the old shape only once the expand version is released to production.
+- Never in a single migration: drop or rename a column or table the production code still reads, add a NOT
+  NULL column without a default, change a column type in place.
+- The expand pull request says what the contract step will remove, and when.
+
 ### Commands
 
 - Install: `uv sync --locked`
