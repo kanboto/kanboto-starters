@@ -11,6 +11,9 @@ CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does n
 - Configuration through environment variables only, each one listed in `.env.example`; no hard-coded value, no
   configuration file in the image. Each service the application calls has its own variable
   (`BILLING_API_URL`).
+- Values in `.env.example` are development values. A variable that has no valid default outside development
+  gets a comment line just above it: `# secret` for a credential, whose example value is never reused,
+  `# required` for any other value set per environment (an external service's URL, an account identifier).
 - Stateless: nothing is written outside `/tmp` (the image runs on a read-only filesystem); sessions, files and
   caches live in an external service. Several instances run side by side.
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
