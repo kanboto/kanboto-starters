@@ -5,6 +5,7 @@ name: Kanboto CI · Node.js (nuxt)
   push:
     branches:
     - master
+    - hotfix/**
 permissions:
   contents: read
   packages: read

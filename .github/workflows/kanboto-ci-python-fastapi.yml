@@ -5,6 +5,7 @@ name: Kanboto CI · Python (fastapi)
   push:
     branches:
     - master
+    - hotfix/**
 permissions:
   contents: read
   packages: read

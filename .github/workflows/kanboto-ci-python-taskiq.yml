@@ -5,6 +5,7 @@ name: Kanboto CI · Python (taskiq)
   push:
     branches:
     - master
+    - hotfix/**
 permissions:
   contents: read
   packages: read
