@@ -1,4 +1,4 @@
-# Kit CI Kanboto node v6 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit CI Kanboto node v7 : ne pas modifier, Kanboto le met à jour par PR.
 name: Kanboto CI · Node.js (nuxt)
 'on':
   pull_request: null
@@ -7,6 +7,7 @@ name: Kanboto CI · Node.js (nuxt)
     - master
 permissions:
   contents: read
+  packages: read
 concurrency:
   group: kanboto-ci-node-nuxt-${{ github.ref }}
   cancel-in-progress: true
@@ -22,6 +23,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
+        fetch-depth: 0
     - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
       with:
         node-version: '24'
@@ -35,12 +37,62 @@ jobs:
       run: npm run typecheck
     - name: Duplication · jscpd
       run: npx --yes jscpd@5.4.1 . --ignore "**/openapi/public.yaml,**/package-lock.json,**/pnpm-lock.yaml,**/yarn.lock,**/bun.lock,**/poetry.lock,**/uv.lock,**/pdm.lock,**/Pipfile.lock,**/.terraform.lock.hcl"
-    - name: Scan · trivy fs
+    - name: Scan · trivy fs, failles introduites
+      env:
+        BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
       run: |
-        docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" -w /src -v "$RUNNER_TEMP/trivy:/cache" \
+        set -euo pipefail
+        docker run --rm -v "$GITHUB_WORKSPACE":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
           ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
           --db-repository ghcr.io/kanboto/trivy-db:2 \
-          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 nuxt
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-head.json nuxt
+        rm -f "$RUNNER_TEMP/scan-base.json"
+        if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+          git worktree add --detach "$RUNNER_TEMP/kanboto-base" "$BASE" >/dev/null
+        docker run --rm -v "$RUNNER_TEMP/kanboto-base":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
+          ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
+          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-base.json nuxt
+          git worktree remove --force "$RUNNER_TEMP/kanboto-base"
+        else
+          echo "Base de comparaison introuvable ($BASE) : scan informatif"
+        fi
+        python3 - "Scan" "$RUNNER_TEMP/scan-head.json" "$RUNNER_TEMP/scan-base.json" <<'PY'
+        import json, sys
+        def load(path):
+            try:
+                data = json.load(open(path))
+            except (OSError, ValueError):
+                return None
+            found = {}
+            for result in data.get("Results") or []:
+                where = result.get("Target", "")
+                target = "" if result.get("Class") == "os-pkgs" else where
+                for v in result.get("Vulnerabilities") or []:
+                    line = (f"{v.get('VulnerabilityID')} {v.get('Severity', '')} {v.get('PkgName', '')} "
+                            f"{v.get('InstalledVersion', '')} -> {v.get('FixedVersion', '')} ({where})")
+                    found[(target, v.get("PkgName", ""), v.get("VulnerabilityID", ""))] = line
+                for m in result.get("Misconfigurations") or []:
+                    if m.get("Status") == "FAIL":
+                        line = f"{m.get('ID')} {m.get('Severity', '')} {m.get('Title', '')} ({where})"
+                        found[(target, "", m.get("ID", ""))] = line
+            return found
+        title, head_path, base_path = sys.argv[1:4]
+        head = load(head_path) or {}
+        base = load(base_path)
+        if base is None:
+            for line in head.values():
+                print(f"::warning title={title}::{line}")
+            print(f"{len(head)} faille(s), sans base de comparaison : non bloquant")
+            sys.exit(0)
+        new = [line for key, line in head.items() if key not in base]
+        for line in new:
+            print(f"::error title={title}::introduite par ce changement : {line}")
+        known = len(head) - len(new)
+        if known:
+            print(f"{known} faille(s) déjà présente(s) sur la base : suivies par les alertes, non bloquantes")
+        sys.exit(1 if new else 0)
+        PY
     - name: Tests · npm test
       run: npm test
     - name: Build · npm run build
@@ -49,12 +101,66 @@ jobs:
       run: docker run --rm -i ghcr.io/kanboto/hadolint:stable hadolint - < Dockerfile
     - name: Image · build
       run: docker build --pull -t kanboto-ci-image .
-    - name: Image · trivy
+    - name: Image · trivy, failles introduites
+      env:
+        BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ACTOR: ${{ github.actor }}
+        REPOSITORY: ${{ github.repository }}
       run: |
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy:/cache" \
+        set -euo pipefail
+        IMAGE="ghcr.io/$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')-nuxt"
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
           ghcr.io/kanboto/trivy:stable image --cache-dir /cache --skip-version-check \
           --db-repository ghcr.io/kanboto/trivy-db:2 \
-          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 kanboto-ci-image
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/image-head.json kanboto-ci-image
+        rm -f "$RUNNER_TEMP/image-base.json"
+        if [ -n "$BASE" ] && echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin >/dev/null 2>&1 \
+          && docker pull -q "$IMAGE:$BASE" >/dev/null 2>&1; then
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
+          ghcr.io/kanboto/trivy:stable image --cache-dir /cache --skip-version-check \
+          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/image-base.json "$IMAGE:$BASE"
+        else
+          echo "Image de la base absente ($IMAGE:$BASE) : scan informatif"
+        fi
+        docker logout ghcr.io >/dev/null 2>&1 || true
+        python3 - "Scan de l'image" "$RUNNER_TEMP/image-head.json" "$RUNNER_TEMP/image-base.json" <<'PY'
+        import json, sys
+        def load(path):
+            try:
+                data = json.load(open(path))
+            except (OSError, ValueError):
+                return None
+            found = {}
+            for result in data.get("Results") or []:
+                where = result.get("Target", "")
+                target = "" if result.get("Class") == "os-pkgs" else where
+                for v in result.get("Vulnerabilities") or []:
+                    line = (f"{v.get('VulnerabilityID')} {v.get('Severity', '')} {v.get('PkgName', '')} "
+                            f"{v.get('InstalledVersion', '')} -> {v.get('FixedVersion', '')} ({where})")
+                    found[(target, v.get("PkgName", ""), v.get("VulnerabilityID", ""))] = line
+                for m in result.get("Misconfigurations") or []:
+                    if m.get("Status") == "FAIL":
+                        line = f"{m.get('ID')} {m.get('Severity', '')} {m.get('Title', '')} ({where})"
+                        found[(target, "", m.get("ID", ""))] = line
+            return found
+        title, head_path, base_path = sys.argv[1:4]
+        head = load(head_path) or {}
+        base = load(base_path)
+        if base is None:
+            for line in head.values():
+                print(f"::warning title={title}::{line}")
+            print(f"{len(head)} faille(s), sans base de comparaison : non bloquant")
+            sys.exit(0)
+        new = [line for key, line in head.items() if key not in base]
+        for line in new:
+            print(f"::error title={title}::introduite par ce changement : {line}")
+        known = len(head) - len(new)
+        if known:
+            print(f"{known} faille(s) déjà présente(s) sur la base : suivies par les alertes, non bloquantes")
+        sys.exit(1 if new else 0)
+        PY
     - name: Image · contrat d'exécution
       run: |
         set -euo pipefail
