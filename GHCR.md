@@ -10,8 +10,8 @@ intact, so each digest is the upstream one. Since: the date this digest was firs
 |---|---|---|---|
 | `ghcr.io/hadolint/hadolint:v2.15.1` | `ghcr.io/kanboto/hadolint:stable`, `v2.15.1` | `sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d` | 2026-10-09 |
 | `ghcr.io/aquasecurity/trivy:0.76.1` | `ghcr.io/kanboto/trivy:stable`, `0.76.1` | `sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c` | 2026-10-22 |
-| `ghcr.io/aquasecurity/trivy-db:2` | `ghcr.io/kanboto/trivy-db:2` | `sha256:65b12446ab3983415d226c77bf92bba70f174bda4c9637a0082694cb2ba262af` | 2026-10-28 |
+| `ghcr.io/aquasecurity/trivy-db:2` | `ghcr.io/kanboto/trivy-db:2` | `sha256:19b5d8a057520ec1b57fb0a1b5f0a1e11f856df2e8e83a3aa1b467093d0b094f` | 2026-10-29 |
 | `ghcr.io/aquasecurity/trivy-checks:2` | `ghcr.io/kanboto/trivy-checks:2` | `sha256:b0e12d009b01dcc8ca2ebbc199b9caf3922491978d21c17b61c1d7f6dc75220b` | 2026-10-15 |
-| `tufin/oasdiff:v1.34.1` | `ghcr.io/kanboto/oasdiff:stable`, `v1.34.1` | `sha256:67a23cfea7d251e2ae34ee703ac8733c5d96bc2e7b90fd0f4d475ec99367b85f` | 2026-10-22 |
+| `tufin/oasdiff:v1.35.0` | `ghcr.io/kanboto/oasdiff:stable`, `v1.35.0` | `sha256:82b1840a77335562bb11ce95f77ad31745a0c6f3a770929333ed1c5ef466e400` | 2026-10-29 |
 | `postgres:17-alpine` | `ghcr.io/kanboto/postgres:17-alpine` | `sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b` | 2026-10-26 |
-| `node:24-trixie-slim` | `ghcr.io/kanboto/node:24-trixie-slim` | `sha256:89c5244bc22a9bc3287d89ebc7e49b9cb5bb84cd40e6175ac3421d5a9f68b95a` | 2026-10-28 |
+| `node:24-trixie-slim` | `ghcr.io/kanboto/node:24-trixie-slim` | `sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446` | 2026-10-29 |
