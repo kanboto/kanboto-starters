@@ -4,7 +4,7 @@ name: Mirror images
   - cron: '23 2 * * *'
   workflow_dispatch: null
 permissions:
-  contents: write
+  contents: read
   packages: write
 concurrency:
   group: mirror-images
@@ -46,19 +46,3 @@ jobs:
       run: echo "$GITHUB_TOKEN" | crane auth login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
     - name: Mirror
       run: .github/mirror-images.sh
-    - name: Commit GHCR.md
-      if: ${{ !cancelled() }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Pushed with GITHUB_TOKEN: GitHub starts no workflow on this push, so the kits do not run again.
-      run: |
-        set -euo pipefail
-        if [ ! -f GHCR.md ]; then exit 0; fi
-        git add GHCR.md
-        if git diff --cached --quiet; then echo "GHCR.md unchanged"; exit 0; fi
-        git -c user.name='github-actions[bot]' \
-          -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-          commit -m "Mirrored images: update GHCR.md"
-        auth=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)
-        echo "::add-mask::$auth"
-        git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "HEAD:$GITHUB_REF_NAME"

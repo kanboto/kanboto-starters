@@ -1,0 +1,19 @@
+name: Dependabot auto-merge
+# Dependabot's configuration is Kanboto's kit: majors are ignored, so every pull request it opens (security
+# fix, Monday's minors and patches, base image digest) is merged once the CI kits required on master pass.
+'on': pull_request
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  automerge:
+    name: dependabot-automerge
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Enable auto-merge
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: gh pr merge --auto --squash "$PR_URL"

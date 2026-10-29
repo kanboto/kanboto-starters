@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Copies the images listed in $IMAGES to $MIRROR with crane, manifests intact (multi-arch index included, so a
-# copy keeps the upstream digest), then writes $OUT. One image per line: `<source> <name:tag> [<owner/repo>]`.
+# copy keeps the upstream digest), then writes the table of copies to $OUT (the run's summary). One image per
+# line: `<source> <name:tag> [<owner/repo>]`.
 # - With a GitHub repository, the source is a tool: its tag is the repository's latest stable release (as is,
 #   or without its leading `v`), copied under that version and under the mirror tag (`stable`).
 # - Without, the source carries its tag (`postgres:17-alpine`), copied as is.
@@ -11,8 +12,7 @@ mirror=${MIRROR:?MIRROR is required}
 attempts=${ATTEMPTS:-10}
 delay=${DELAY:-15}
 max_delay=${MAX_DELAY:-300}
-out=${OUT:-GHCR.md}
-today=$(date -u +%Y-%m-%d)
+out=${OUT:-${GITHUB_STEP_SUMMARY:-/dev/stdout}}
 ref='^[a-z0-9][a-z0-9._/-]*(:[A-Za-z0-9._-]+)?$'
 
 with_retry() {
@@ -53,14 +53,8 @@ copy() {
   crane copy "$src" "$dst"
 }
 
-# Date the digest was first mirrored, read from the previous table: an unchanged image keeps its date.
-since() {
-  [ -f "$out" ] || return 0
-  awk -F' \\| ' -v m="$1" -v d="\`$2\`" 'index($2, m) == 1 && $3 == d { sub(/ \|$/, "", $4); print $4; exit }' "$out"
-}
-
 mirror_one() {
-  local source=$1 target=$2 repo=${3:-} version src dst tags digest date
+  local source=$1 target=$2 repo=${3:-} version src dst tags digest
   if [ -n "$repo" ]; then
     version=$(with_retry latest_release "$repo") || return 1
     [[ "$version" =~ ^v?[0-9]+(\.[0-9]+)*$ ]] || { echo "unexpected release tag: $version" >&2; return 1; }
@@ -77,8 +71,7 @@ mirror_one() {
     tags="\`$dst\`"
   fi
   digest=$(with_retry crane digest "$dst") || return 1
-  date=$(since "\`$mirror/$target\`" "$digest")
-  row="| \`$src\` | $tags | \`$digest\` | ${date:-$today} |"
+  row="| \`$src\` | $tags | \`$digest\` |"
 }
 
 rows=()
@@ -98,8 +91,7 @@ while read -r source target repo extra; do
   else
     echo "::error title=Mirror::$source not mirrored after $attempts attempts"
     failed=1
-    previous=$([ -f "$out" ] && grep -F "| \`$mirror/$target\`" "$out" || true)
-    if [ -n "$previous" ]; then rows+=("$previous"); fi
+    rows+=("| \`$source\` | not mirrored | |")
   fi
   echo "::endgroup::"
 done <<< "$IMAGES"
@@ -107,14 +99,11 @@ done <<< "$IMAGES"
 {
   echo "# Mirrored images"
   echo
-  echo "Copies of the images used by Kanboto's CI kits and starters, so that CI does not depend on upstream"
-  echo "registries' rate limits (Docker Hub's anonymous pulls in particular). Refreshed nightly by"
-  echo "[\`mirror-images.yml\`](.github/workflows/mirror-images.yml): tools at their latest stable release"
-  echo "(tag \`stable\`, plus the version tag), versioned images under their upstream tag. Manifests are copied"
-  echo "intact, so each digest is the upstream one. Since: the date this digest was first mirrored."
+  echo "Tools at their latest stable release (tag \`stable\`, plus the version tag), versioned images under"
+  echo "their upstream tag. Manifests are copied intact, so each digest is the upstream one."
   echo
-  echo "| Source | Mirror | Digest | Since |"
-  echo "|---|---|---|---|"
+  echo "| Source | Mirror | Digest |"
+  echo "|---|---|---|"
   if [ ${#rows[@]} -gt 0 ]; then printf '%s\n' "${rows[@]}"; fi
 } > "$out"
 

@@ -1,0 +1,76 @@
+# Kit Dependabot Kanboto v4 : ne pas modifier, Kanboto le met à jour par PR.
+version: 2
+updates:
+- package-ecosystem: docker
+  directories:
+  - /fastapi
+  - /nuxt
+  - /taskiq
+  schedule:
+    interval: weekly
+    day: monday
+    time: "06:00"
+  cooldown:
+    default-days: 3
+  groups:
+    kanboto-maintenance:
+      applies-to: version-updates
+      patterns:
+      - '*'
+  ignore:
+  - dependency-name: '*'
+    update-types:
+    - version-update:semver-major
+    - version-update:semver-minor
+    - version-update:semver-patch
+- package-ecosystem: npm
+  directories:
+  - /nuxt
+  schedule:
+    interval: weekly
+    day: monday
+    time: "06:00"
+  cooldown:
+    default-days: 3
+  groups:
+    kanboto-securite:
+      applies-to: security-updates
+      patterns:
+      - '*'
+    kanboto-maintenance:
+      applies-to: version-updates
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
+  ignore:
+  - dependency-name: '*'
+    update-types:
+    - version-update:semver-major
+- package-ecosystem: uv
+  directories:
+  - /fastapi
+  - /taskiq
+  schedule:
+    interval: weekly
+    day: monday
+    time: "06:00"
+  cooldown:
+    default-days: 3
+  groups:
+    kanboto-securite:
+      applies-to: security-updates
+      patterns:
+      - '*'
+    kanboto-maintenance:
+      applies-to: version-updates
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
+  ignore:
+  - dependency-name: '*'
+    update-types:
+    - version-update:semver-major

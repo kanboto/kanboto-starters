@@ -1,5 +1,5 @@
 # Production image: multi-stage, the built server only, non-root user, runtime image pinned by digest.
-# Build stage from Kanboto's mirror of Docker Hub's node image (digest recorded in GHCR.md).
+# Build stage from Kanboto's mirror of Docker Hub's node image (digest listed in the summary of mirror-images runs).
 # Distroless runtime: Node.js 24, no shell, no package manager.
 FROM ghcr.io/kanboto/node:24-trixie-slim AS build
 WORKDIR /app
