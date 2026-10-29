@@ -1,4 +1,4 @@
-# Kit Dependabot Kanboto v4 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit Dependabot Kanboto v5 : ne pas modifier, Kanboto le met à jour par PR.
 version: 2
 updates:
 - package-ecosystem: docker
