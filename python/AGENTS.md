@@ -1,10 +1,22 @@
 # AGENTS.md
 
 <!-- kanboto:start -->
-## Kanboto rules (FastAPI stack)
+## Kanboto rules (Python stack)
 
 This section is maintained by Kanboto: do not edit it by hand, Kanboto updates it through pull requests. The
 CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does not pass.
+
+### Structure
+
+- One project, one image: one manifest, one lock, one `Dockerfile` at the root. Each component is a package
+  named after it, run by `python -m <package>`; a component added later is one more package.
+- `common/` holds the domain, shared by the components: entities, rules and invariants, use cases,
+  transactions, data access. It never imports a component package.
+- A component package holds the exposure only (HTTP routes and schemas, authentication, consumers,
+  serialization, retries, `__main__`) and calls `common/`: no business rule, no direct data access, no import
+  of another component package. Inside it, imports are relative (`from .health import …`).
+- `migrations/` holds the database schema, driven by `common/`. Tests mirror the packages: `tests/common/`,
+  `tests/<package>/`.
 
 ### Runtime
 
@@ -18,18 +30,18 @@ CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does n
   caches live in an external service. Several instances run side by side.
 - Non-blocking: async drivers (database, HTTP), no blocking call inside an `async` function, a timeout on
   every outbound call; long CPU-bound work goes to a worker through a queue. Other services are called through
-  the shared client of `app/outbound.py`, never a client created per request.
-- Database connections come from the pools of `app/db.py`, never opened per request. Keep transactions short,
-  and never hold one open while calling another service.
-- A handler that only reads uses `db.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only in
-  any case). A handler that writes uses `db.WriteSession` for all its work, including the reads it needs to
-  decide; it never mixes both. A write returns the updated resource, so clients need not read it back.
+  the shared client of the API package's `outbound.py`, never a client created per request.
+- Database connections come from the pools of `common/db.py`, never opened per request. Keep transactions
+  short, and never hold one open while calling another service.
+- A handler that only reads uses `deps.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only
+  in any case). A handler that writes uses `deps.WriteSession` for all its work, including the reads it needs
+  to decide; it never mixes both. A write returns the updated resource, so clients need not read it back.
 - `GET /healthz` (alive), `GET /readyz` (dependencies reachable, `503` during shutdown) and `GET /metrics`
   (Prometheus) stay at the root path, on `PORT`, outside `/api` and `/internal`.
 - Graceful shutdown on `SIGTERM` within `SHUTDOWN_TIMEOUT_S`: in-flight work completes.
 - JSON logs on stdout, one line per event.
 - Multi-stage image, non-root user, base images pinned by digest; migrations run through
-  `python -m app migrate`, never at service startup.
+  `python -m <package> migrate`, never at service startup.
 
 ### Code
 
@@ -52,19 +64,26 @@ Rules in priority order: when two conflict, the first one wins.
 7. **Nothing dead.** No commented-out code, no unused function or parameter, no TODO without a ticket.
    Comments explain why, never what the code already says.
 
+### Tasks
+
+- Tasks live in the worker package's `tasks.py`, each with an explicit task name. A task is delivered at least
+  once: it is idempotent, and finishes within `TASK_TIMEOUT_S`.
+- A failed task is retried up to `MAX_RETRIES` times, then kept as a dead letter, never lost.
+- At most `WORKER_CONCURRENCY` tasks run at once in an instance.
+
 ### API
 
 - Public routes under `/api/v<N>/`, internal routes under `/internal/v<N>/`; only the major version appears in
   the path.
 - A backward-compatible change (new field, optional parameter or endpoint) stays in the current version. A
   breaking change opens `/api/v<N+1>/`; the previous version keeps being served, marked `deprecated` with a
-  removal date (`Deprecation` and `Sunset` headers, see `app/deprecation.py`). Nothing breaks in a published
-  version.
-- `openapi/public.yaml` follows the code: `python -m app openapi > openapi/public.yaml`.
+  removal date (`Deprecation` and `Sunset` headers, see the API package's `deprecation.py`). Nothing breaks in
+  a published version.
+- Each API's OpenAPI spec follows the code: `python -m <package> openapi > openapi/<package>.yaml`.
 - Errors use RFC 9457 (`application/problem+json`); dates are ISO 8601 in UTC; pagination is cursor-based
   (`limit`, `cursor`, response `items` and `next_cursor`); resource names are plural.
-- A `POST` that creates a resource or triggers a side effect requires `Idempotency-Key` (see
-  `app/idempotency.py`).
+- A `POST` that creates a resource or triggers a side effect requires `Idempotency-Key` (see the API package's
+  `idempotency.py`).
 
 ### Database
 
