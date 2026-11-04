@@ -1,4 +1,4 @@
-# Kit CI Kanboto python v7 : ne pas modifier, Kanboto le met à jour par PR.
+# Kit CI Kanboto python v8 : ne pas modifier, Kanboto le met à jour par PR.
 name: Kanboto CI · Python (taskiq)
 'on':
   pull_request: null
@@ -19,19 +19,22 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: taskiq
+        working-directory: ../composed
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
         fetch-depth: 0
+    - name: Composition · socle python et module taskiq
+      working-directory: .
+      run: python3 scripts/compose.py ../composed taskiq
     - name: Installer uv
       run: pipx install uv
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
       with:
         python-version: '3.13'
     - name: Dépendances
-      run: uv sync --locked
+      run: uv sync --locked --all-extras
     - name: Lint · uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915
       run: uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915
     - name: Lint · uv run ruff format --check .
@@ -39,7 +42,7 @@ jobs:
     - name: Lint · uv run mypy .
       run: uv run mypy .
     - name: Duplication · jscpd
-      run: npx --yes jscpd@5.4.1 . --ignore "**/openapi/public.yaml,**/package-lock.json,**/pnpm-lock.yaml,**/yarn.lock,**/bun.lock,**/poetry.lock,**/uv.lock,**/pdm.lock,**/Pipfile.lock,**/.terraform.lock.hcl"
+      run: npx --yes jscpd@5.4.1 . --ignore "**/openapi/*.yaml,**/package-lock.json,**/pnpm-lock.yaml,**/yarn.lock,**/bun.lock,**/poetry.lock,**/uv.lock,**/pdm.lock,**/Pipfile.lock,**/.terraform.lock.hcl"
     - name: Scan · trivy fs, failles introduites
       env:
         BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -48,14 +51,18 @@ jobs:
         docker run --rm -v "$GITHUB_WORKSPACE":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
           ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
           --db-repository ghcr.io/kanboto/trivy-db:2 \
-          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-head.json taskiq
+          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-head.json python
         rm -f "$RUNNER_TEMP/scan-base.json"
         if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
           git worktree add --detach "$RUNNER_TEMP/kanboto-base" "$BASE" >/dev/null
-        docker run --rm -v "$RUNNER_TEMP/kanboto-base":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
-          ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
-          --db-repository ghcr.io/kanboto/trivy-db:2 \
-          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-base.json taskiq
+          if [ -e "$RUNNER_TEMP/kanboto-base/python" ]; then
+          docker run --rm -v "$RUNNER_TEMP/kanboto-base":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
+            ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
+            --db-repository ghcr.io/kanboto/trivy-db:2 \
+            --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-base.json python
+          else
+            echo '{}' > "$RUNNER_TEMP/scan-base.json"  # python absent de la base : rien n'y était
+          fi
           git worktree remove --force "$RUNNER_TEMP/kanboto-base"
         else
           echo "Base de comparaison introuvable ($BASE) : scan informatif"
@@ -96,6 +103,7 @@ jobs:
             print(f"{known} faille(s) déjà présente(s) sur la base : suivies par les alertes, non bloquantes")
         sys.exit(1 if new else 0)
         PY
+      working-directory: .
     - name: Tests · uv run pytest
       run: uv run pytest
     - name: Image · hadolint

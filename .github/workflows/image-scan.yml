@@ -22,15 +22,22 @@ jobs:
       fail-fast: false
       matrix:
         starter: [fastapi, nuxt, taskiq]
-    defaults:
-      run:
-        working-directory: ${{ matrix.starter }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
+    # A Python starter is a module: its image is built from the base composed with it, as in its CI kit.
     - name: Build
-      run: docker build --pull -t starter-image .
+      env:
+        STARTER: ${{ matrix.starter }}
+      run: |
+        set -euo pipefail
+        context="$STARTER"
+        if [ -f "$STARTER/module.toml" ]; then
+          python3 scripts/compose.py "$RUNNER_TEMP/composed" "$STARTER"
+          context="$RUNNER_TEMP/composed"
+        fi
+        docker build --pull -t starter-image "$context"
     - name: Trivy
       run: |
         set -euo pipefail
