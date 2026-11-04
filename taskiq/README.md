@@ -1,52 +1,48 @@
-# TaskIQ starter
+# TaskIQ module
 
-A minimal, production-ready background worker built with TaskIQ and NATS JetStream. It ships with everything a
-production worker needs and nothing it does not: tasks that are never lost, bounded retries with dead letters,
-bounded concurrency, probes, Prometheus metrics, graceful shutdown, JSON logs and a hardened image.
+A minimal, production-ready background worker built with TaskIQ and NATS JetStream, over the
+[Python base](../python/). It ships with everything a production worker needs and nothing it does not: tasks
+that are never lost, bounded retries with dead letters, bounded concurrency, probes, Prometheus metrics,
+graceful shutdown, JSON logs and a hardened image. Its tasks share the project's business code (`common/`).
 
-## Requirements
+The module is the package `worker/` and its tests `tests/worker/`; [`module.toml`](module.toml) says how
+[`scripts/compose.py`](../scripts/compose.py) adds it to a project:
 
-- Python 3.13 and [uv](https://docs.astral.sh/uv/)
-- A NATS server with JetStream enabled, 2.10 or later
-- Docker, to build the image
+```sh
+python3 scripts/compose.py ../shop fastapi taskiq     # api/ and worker/
+python3 scripts/compose.py ../shop taskiq:jobs        # the worker alone, as jobs/
+```
 
 ## Getting started
+
+A NATS server with JetStream enabled (2.10 or later) is needed. In the composed project:
 
 ```sh
 docker run -d --name nats -p 4222:4222 nats -js   # a local NATS server with JetStream
 cp .env.example .env
-uv sync
-uv run python -m app                              # run the worker; probes on http://localhost:8080
+uv sync --extra worker
+uv run python -m worker                           # run the worker; probes on http://localhost:8080
 ```
 
 Try it, from another terminal:
 
 ```sh
-uv run python -m app enqueue process_item '{"item": {"id": "42", "name": "Widget", "quantity": 2}}'
+uv run python -m worker enqueue process_item '{"item": {"id": "42", "name": "Widget", "quantity": 2}}'
 ```
 
 The worker writes one log line for the task (`item processed`) and one for its execution (`task`).
 
-## Development
-
-| Task | Command |
-|---|---|
-| Lint | `uv run ruff check .` |
-| Format check | `uv run ruff format --check .` |
-| Type check | `uv run mypy .` |
-| Tests | `uv run pytest` |
-
 Tests need no NATS server: tasks run on TaskIQ's in-memory broker, and the worker loop on an in-process broker
-with acknowledgements.
+with acknowledgements. Development commands are in the base's README.
 
 ## Configuration
 
-All configuration comes from environment variables.
+Variables of the worker, added to `.env.example` by the composition; the shared ones (database, logs) are in
+the base's README.
 
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `8080` | Port for the probes and the metrics |
-| `LOG_LEVEL` | `INFO` | Log level |
 | `NATS_URL` | required | NATS URL, e.g. `nats://user:pass@host:4222`; several servers comma-separated |
 | `NATS_CONNECT_TIMEOUT_S` | `3` | Timeout of one connection attempt |
 | `NATS_STREAM` | `tasks` | JetStream stream holding the tasks and the dead letters, created if missing |
@@ -89,8 +85,8 @@ never their values).
 From Python code that shares this project's tasks:
 
 ```python
-from app.broker import broker
-from app.tasks import Item, process_item
+from worker.broker import broker
+from worker.tasks import Item, process_item
 
 await broker.startup()  # once per process
 await process_item.kiq(Item(id="42", name="Widget", quantity=2))
@@ -105,24 +101,18 @@ On the wire, the message's arguments are plain JSON:
 From the command line, or from the image:
 
 ```sh
-python -m app enqueue process_item '{"item": {"id": "42", "name": "Widget", "quantity": 2}}'
+python -m worker enqueue process_item '{"item": {"id": "42", "name": "Widget", "quantity": 2}}'
 ```
 
 ## Container image
 
-```sh
-docker build -t starter-taskiq .
-docker run --read-only --tmpfs /tmp --env-file .env.example -p 8080:8080 starter-taskiq
-```
-
-The image is distroless (`gcr.io/distroless/python3-debian13`): Python 3.13 and its libraries, no shell and no
-package manager, running as the non-root `nonroot` user (uid 65532). The image runs on a read-only filesystem.
-
-The same image runs the other command:
+The project's image runs the worker as `python -m worker` (the default when the module comes first), and the
+other commands:
 
 | Command | Purpose |
 |---|---|
-| `python -m app enqueue <task> '<json kwargs>'` | Send one task, e.g. for a manual run |
+| `python -m worker enqueue <task> '<json kwargs>'` | Send one task, e.g. for a manual run |
+| `python -m worker migrate` | Apply pending database migrations, before starting a new version |
 
 ## Endpoints
 
@@ -134,20 +124,21 @@ The same image runs the other command:
 
 Every log line written while a task runs carries its `task_id`, kept across retries.
 
-## Project layout
+## Module layout
 
 ```
-app/
-├── __main__.py      Entrypoint: worker, enqueue
+worker/
+├── __main__.py      Entrypoint: worker, enqueue, migrate
 ├── worker.py        Consumer loop, HTTP server and graceful shutdown, in one process
 ├── broker.py        NATS JetStream broker: stream, consumer, dead letters
 ├── tasks.py         Tasks (process_item is an example)
 ├── middleware.py    Task id on logs, timeout, execution log and metrics, retries
 ├── health.py        Liveness and readiness probes, metrics endpoint
-├── metrics.py       Prometheus metrics
-├── config.py        Settings, from the environment
-└── logs.py          JSON logging
-tests/
+├── metrics.py       Prometheus metrics of task executions
+├── config.py        Settings of the worker, from the environment
+└── logs.py          JSON logging, TaskIQ's lines included
+tests/worker/
+module.toml          How compose.py adds the module (not copied)
 ```
 
 Replace the `process_item` task with your own, keeping its conventions. The other modules implement the runtime

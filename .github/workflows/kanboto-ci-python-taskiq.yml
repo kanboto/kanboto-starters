@@ -19,12 +19,15 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: taskiq
+        working-directory: ../composed
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
         fetch-depth: 0
+    - name: Composition · socle python et module taskiq
+      working-directory: .
+      run: python3 scripts/compose.py ../composed taskiq
     - name: Installer uv
       run: pipx install uv
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97

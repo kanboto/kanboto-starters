@@ -3,9 +3,8 @@ version: 2
 updates:
 - package-ecosystem: docker
   directories:
-  - /fastapi
   - /nuxt
-  - /taskiq
+  - /python
   schedule:
     interval: weekly
     day: monday
@@ -50,8 +49,7 @@ updates:
     - version-update:semver-major
 - package-ecosystem: uv
   directories:
-  - /fastapi
-  - /taskiq
+  - /python
   schedule:
     interval: weekly
     day: monday
