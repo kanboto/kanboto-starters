@@ -1,0 +1,18 @@
+name: Notify Kanboto
+# After every merge on master, Kanboto tests this commit and moves the `v1` tag to it if it is compatible
+# (workflow `starters-tag.yml` of kanboto/kanboto-back): new repositories start from fresh dependencies.
+'on':
+  push:
+    branches:
+    - master
+permissions: {}
+jobs:
+  notify:
+    name: notify-kanboto
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Ask Kanboto to move the tag
+      env:
+        GH_TOKEN: ${{ secrets.KANBOTO_DISPATCH_TOKEN }}
+      run: gh api -X POST repos/kanboto/kanboto-back/dispatches -f event_type=starters-merged
