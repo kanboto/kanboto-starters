@@ -1,8 +1,8 @@
 """Liveness and readiness probes and metrics, on `PORT`: the worker's only HTTP surface, a bare ASGI app.
 
 `/healthz` (liveness) answers as long as the process does; `/readyz` (readiness) answers 200 while the worker
-is connected to NATS and consuming, and the database answers when one is configured; 503 as soon as shutdown
-starts.
+is connected to NATS and consuming, and the database and buckets answer when configured; 503 as soon as
+shutdown starts.
 """
 
 import json
@@ -11,7 +11,7 @@ from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 from common import config as common_config
-from common import db
+from common import db, storage
 from common import metrics as metrics_of_process
 
 from . import metrics
@@ -45,10 +45,16 @@ async def _readyz() -> tuple[int, bytes, str]:
         return _json(503, {"status": "stopping"})
     if State.connected is None or not State.connected():
         return _json(503, {"status": "unavailable"})
+    timeout_s = common_config.get_settings().ready_timeout_s
     try:
-        await db.ping(common_config.get_settings().ready_timeout_s)
+        await db.ping(timeout_s)
     except Exception as exc:  # a database outage makes the instance unready, it does not kill it
         log.warning("database unreachable", extra={"error": str(exc)})
+        return _json(503, {"status": "unavailable"})
+    try:
+        await storage.ping(timeout_s)
+    except Exception as exc:
+        log.warning("object storage unreachable", extra={"error": str(exc)})
         return _json(503, {"status": "unavailable"})
     return _json(200, {"status": "ok"})
 

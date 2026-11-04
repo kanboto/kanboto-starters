@@ -33,6 +33,14 @@ curl -X POST localhost:8080/api/v1/items \
 curl localhost:8080/api/v1/items
 ```
 
+Files (needs a bucket, see the base's README): `POST /api/v1/files?access=private|public` with the file as
+the body stores it under a random key; a private file is read back with `GET /api/v1/files/{key}`, a public
+one at the returned `url`.
+
+```sh
+curl -X POST 'localhost:8080/api/v1/files?access=public' -H 'Content-Type: image/png' --data-binary @logo.png
+```
+
 Regenerate the OpenAPI spec after a change to the API: `uv run python -m api openapi > openapi/api.yaml`
 (a test fails when it is out of date). Development commands are in the base's README.
 
@@ -52,6 +60,7 @@ the base's README.
 | `CORS_ORIGINS` | empty | Browser origins allowed to call the API, comma-separated; CORS is off when empty |
 | `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Proxies trusted for `X-Forwarded-*` headers (IPs or CIDRs) |
 | `MAX_BODY_BYTES` | `1048576` | Largest request body accepted (`413` beyond) |
+| `MAX_UPLOAD_BYTES` | `10485760` | Largest file accepted by the routes that receive files (`UPLOAD_PATHS`) |
 | `IDEMPOTENCY_TTL_S` | `86400` | How long idempotency keys are kept |
 
 Reads go through `deps.ReadSession`, whose transactions are read-only, and writes through `deps.WriteSession`.

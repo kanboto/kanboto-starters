@@ -11,6 +11,8 @@ export default defineNuxtConfig({
       appName: 'My app',
       apiBaseUrl: 'http://localhost:8000',
       apiTimeoutS: 10,
+      // Where the public bucket is served (`useFileUrl()`); empty when the project has none.
+      s3PublicUrl: '',
     },
   },
 

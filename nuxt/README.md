@@ -50,6 +50,7 @@ environment.
 | `NUXT_PUBLIC_APP_NAME` | `My app` | Application name, shown on the page and in its title |
 | `NUXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | Address of the backend API, used by `useApi()` on the server and in the browser |
 | `NUXT_PUBLIC_API_TIMEOUT_S` | `10` | Timeout of a call to the backend API |
+| `NUXT_PUBLIC_S3_PUBLIC_URL` | empty | Where the public bucket is served; `useFileUrl(key)` builds a file's address from it. The frontend only reads it: files are sent through the API |
 
 The application's settings are Nuxt's [runtime config](https://nuxt.com/docs/guide/going-further/runtime-config):
 each key of `runtimeConfig` in `nuxt.config.ts` holds a default, overridden at runtime by its `NUXT_*` variable

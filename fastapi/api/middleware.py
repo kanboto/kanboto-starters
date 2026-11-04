@@ -36,12 +36,16 @@ class RequestMiddleware:
         rid = incoming if REQUEST_ID.match(incoming) else uuid.uuid4().hex
         token = logs.request_id.set(rid)
         path: str = scope["path"]
-        limit = get_settings().max_body_bytes
+        limit = _limit(path)
         status = 500
         start = time.perf_counter()
 
         declared = headers.get(b"content-length", b"")
         if declared.isdigit() and int(declared) > limit:
+
+            async def _refuse() -> dict[str, Any]:
+                raise HTTPException(413, f"request body larger than {limit} bytes")
+
             receive = _refuse
 
         received = 0
@@ -85,8 +89,13 @@ class RequestMiddleware:
             logs.request_id.reset(token)
 
 
-async def _refuse() -> dict[str, Any]:
-    raise HTTPException(413, f"request body larger than {get_settings().max_body_bytes} bytes")
+# Routes that receive files: their own ceiling, `MAX_UPLOAD_BYTES`, instead of `MAX_BODY_BYTES`.
+UPLOAD_PATHS = ("/api/v1/files",)
+
+
+def _limit(path: str) -> int:
+    settings = get_settings()
+    return settings.max_upload_bytes if path.startswith(UPLOAD_PATHS) else settings.max_body_bytes
 
 
 def _client(scope: Scope) -> str | None:

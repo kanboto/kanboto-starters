@@ -3,7 +3,8 @@ removal date (`Deprecation` and `Sunset` headers, `deprecated` in the spec)."""
 
 from fastapi import APIRouter
 
-from . import items
+from . import files, items
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(items.router)
+router.include_router(files.router)
