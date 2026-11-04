@@ -1,17 +1,26 @@
 import asyncio
 import os
 from collections.abc import AsyncIterator, Iterator
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from obstore.store import MemoryStore
 
-from common import config, db
+from common import config, db, storage
 
 
 def _clear_caches() -> None:
-    for cached in (config.get_settings, db.engine, db.read_engine, db.sessionmaker, db.read_sessionmaker):
+    for cached in (
+        config.get_settings,
+        db.engine,
+        db.read_engine,
+        db.sessionmaker,
+        db.read_sessionmaker,
+        storage.bucket,
+    ):
         cached.cache_clear()
 
 
@@ -44,3 +53,31 @@ def no_database(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     _clear_caches()
     yield
     _clear_caches()
+
+
+@pytest.fixture
+def buckets(monkeypatch: pytest.MonkeyPatch) -> Iterator[bool]:
+    """Both buckets on the S3 server of `TEST_S3_ENDPOINT` (and `TEST_S3_ACCESS_KEY_ID`,
+    `TEST_S3_SECRET_ACCESS_KEY`, `TEST_S3_BUCKET`), or none: yields whether they are reachable."""
+    endpoint = os.environ.get("TEST_S3_ENDPOINT")
+    for access in ("PRIVATE", "PUBLIC"):
+        monkeypatch.setenv(f"S3_{access}_BUCKET", os.environ.get("TEST_S3_BUCKET", "") if endpoint else "")
+        monkeypatch.setenv(f"S3_{access}_ACCESS_KEY_ID", os.environ.get("TEST_S3_ACCESS_KEY_ID", ""))
+        monkeypatch.setenv(f"S3_{access}_SECRET_ACCESS_KEY", os.environ.get("TEST_S3_SECRET_ACCESS_KEY", ""))
+    monkeypatch.setenv("S3_ENDPOINT", endpoint or "http://localhost:3900")
+    monkeypatch.setenv("S3_PUBLIC_URL", "https://assets.example.test")
+    _clear_caches()
+    yield bool(endpoint)
+    _clear_caches()
+
+
+@pytest.fixture
+def memory_buckets(buckets: bool, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Both buckets in memory (obstore's `MemoryStore`), whatever the environment says."""
+    stores = {"private": MemoryStore(), "public": MemoryStore()}
+    monkeypatch.setenv("S3_PRIVATE_BUCKET", "private")
+    monkeypatch.setenv("S3_PUBLIC_BUCKET", "public")
+    monkeypatch.setattr(storage, "bucket", lru_cache(lambda access: stores[access]))
+    config.get_settings.cache_clear()
+    yield
+    config.get_settings.cache_clear()

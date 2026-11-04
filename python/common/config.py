@@ -22,9 +22,28 @@ class Settings(BaseSettings):
     db_max_overflow: int = 5
     db_pool_timeout_s: float = 5
     db_pool_recycle_s: int = 1800
-    ready_timeout_s: float = 2  # readiness: database check
+    ready_timeout_s: float = 2  # readiness: database and buckets check
 
-    @field_validator("database_url", "database_read_url")
+    # Object storage (S3): a bucket is configured when its name is set; see `common/storage.py`.
+    s3_endpoint: str = "http://localhost:3900"
+    s3_region: str = "garage"
+    s3_private_bucket: str | None = None
+    s3_private_access_key_id: str | None = None
+    s3_private_secret_access_key: str | None = None
+    s3_public_bucket: str | None = None
+    s3_public_access_key_id: str | None = None
+    s3_public_secret_access_key: str | None = None
+    s3_public_url: str | None = None  # where the public bucket is served, without a trailing slash
+    s3_connect_timeout_s: float = 3
+    s3_timeout_s: float = 30
+
+    @field_validator(
+        "database_url",
+        "database_read_url",
+        "s3_private_bucket",
+        "s3_public_bucket",
+        "s3_public_url",
+    )
     @classmethod
     def _empty_is_unset(cls, value: str | None) -> str | None:
         return value or None

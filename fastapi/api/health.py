@@ -1,8 +1,8 @@
 """Liveness and readiness probes and metrics, at the root path, outside `/api` and `/internal`.
 
 `/healthz` (liveness) answers as long as the server does; `/readyz` (readiness) checks dependencies (the
-database, when one is configured) and returns 503 as soon as shutdown starts, so traffic is routed elsewhere
-before the process exits.
+database and the buckets, when configured) and returns 503 as soon as shutdown starts, so traffic is routed
+elsewhere before the process exits.
 """
 
 import logging
@@ -10,7 +10,7 @@ import logging
 from fastapi import APIRouter, Response
 
 from common import config as common_config
-from common import db
+from common import db, storage
 
 from . import metrics
 
@@ -32,10 +32,17 @@ async def readyz(response: Response) -> dict[str, str]:
     if State.stopping:
         response.status_code = 503
         return {"status": "stopping"}
+    timeout_s = common_config.get_settings().ready_timeout_s
     try:
-        await db.ping(common_config.get_settings().ready_timeout_s)
+        await db.ping(timeout_s)
     except Exception as exc:  # a database outage makes the instance unready, it does not kill it
         log.warning("database unreachable", extra={"error": str(exc)})
+        response.status_code = 503
+        return {"status": "unavailable"}
+    try:
+        await storage.ping(timeout_s)
+    except Exception as exc:
+        log.warning("object storage unreachable", extra={"error": str(exc)})
         response.status_code = 503
         return {"status": "unavailable"}
     return {"status": "ok"}

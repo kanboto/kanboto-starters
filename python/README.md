@@ -62,12 +62,26 @@ All configuration comes from environment variables, each one in `.env.example`. 
 | `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per instance |
 | `DB_POOL_TIMEOUT_S` | `5` | Wait for a free connection before failing the request |
 | `DB_POOL_RECYCLE_S` | `1800` | Replace connections older than this |
-| `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
+| `READY_TIMEOUT_S` | `2` | Timeout of the readiness check (database and buckets) |
+| `S3_ENDPOINT` | `http://localhost:3900` | S3 server |
+| `S3_REGION` | `garage` | S3 region |
+| `S3_PRIVATE_BUCKET` | unset | Private bucket, read through the API only; none when unset |
+| `S3_PRIVATE_ACCESS_KEY_ID`, `S3_PRIVATE_SECRET_ACCESS_KEY` | unset | Its key |
+| `S3_PUBLIC_BUCKET` | unset | Public bucket, served as-is at `S3_PUBLIC_URL`; none when unset |
+| `S3_PUBLIC_ACCESS_KEY_ID`, `S3_PUBLIC_SECRET_ACCESS_KEY` | unset | Its key |
+| `S3_PUBLIC_URL` | unset | Where the public bucket is served (`https://…`, no trailing slash) |
+| `S3_CONNECT_TIMEOUT_S` | `3` | Timeout to open a connection to S3 |
+| `S3_TIMEOUT_S` | `30` | Timeout of a single S3 request |
 
 Each component adds its own (see its module's README). The database is optional: without `DATABASE_URL`, the
 readiness probes skip it and the commands that need it (`migrate`, `cleanup`) stop with exit code 1. Pools
 are opened on first use, so a component that never touches the database opens none. Size them so that `instances × (DB_POOL_SIZE + DB_MAX_OVERFLOW)`
 stays under each database's connection limit, every component included.
+
+Files go to object storage (`common/storage.py`), never to the read-only filesystem: a `private` bucket for
+what only the API serves, a `public` one for what anyone may load at `S3_PUBLIC_URL/<key>`, with random keys
+(`storage.new_key()`). Both are optional like the database: an unset bucket name means no bucket, and the
+readiness probes skip it.
 
 ## Container image
 

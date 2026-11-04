@@ -33,6 +33,9 @@ CI (`kanboto-ci-*`) enforces these rules; a pull request that breaks them does n
   the shared client of the API package's `outbound.py`, never a client created per request.
 - Database connections come from the pools of `common/db.py`, never opened per request. Keep transactions
   short, and never hold one open while calling another service.
+- Files go to the S3 buckets through `common/storage.py`, never to disk: `private` for what only the
+  application serves, `public` for what anyone loads at `S3_PUBLIC_URL/<key>`. Keys are random, a frontend
+  only reads public files, and uploads go through an API.
 - A handler that only reads uses `deps.ReadSession` (read replica when `DATABASE_READ_URL` is set, read-only
   in any case). A handler that writes uses `deps.WriteSession` for all its work, including the reads it needs
   to decide; it never mixes both. A write returns the updated resource, so clients need not read it back.

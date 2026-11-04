@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # Proxies trusted for X-Forwarded-* headers (comma-separated IPs or CIDRs).
     forwarded_allow_ips: str = "127.0.0.1"
     max_body_bytes: int = 1_048_576
+    max_upload_bytes: int = 10_485_760  # routes that receive files (`middleware.UPLOAD_PATHS`)
     idempotency_ttl_s: int = 86_400
 
 
