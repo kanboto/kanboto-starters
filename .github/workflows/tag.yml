@@ -1,0 +1,51 @@
+name: Tag
+# Kanboto copies the starters at the `v1` tag when it creates a repository. The tag follows master: once the
+# CI kits required on master pass on a commit, it moves there, so new repositories start from the latest
+# green dependencies. A change that the deployed Kanboto cannot read (layout, `module.toml` format) moves
+# `TAG` to `v2` in the same pull request: `v1` then stays on the last compatible commit.
+'on':
+  workflow_run:
+    workflows:
+    - Kanboto CI · Node.js (nuxt)
+    - Kanboto CI · Python (fastapi)
+    - Kanboto CI · Python (taskiq)
+    types:
+    - completed
+    branches:
+    - master
+permissions:
+  contents: write
+  checks: read
+concurrency:
+  group: tag
+  cancel-in-progress: false
+jobs:
+  tag:
+    name: tag
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: v1
+      CHECKS: kanboto-ci-node-nuxt kanboto-ci-python-fastapi kanboto-ci-python-taskiq
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+    - name: Move the tag to this commit once every required check is green
+      run: |
+        set -euo pipefail
+        ok=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?per_page=100" \
+          --jq '[.check_runs[] | select(.conclusion == "success") | .name] | unique | join(" ")')
+        for check in $CHECKS; do
+          [[ " $ok " == *" $check "* ]] || { echo "$check not green yet on $SHA"; exit 0; }
+        done
+        current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha 2>/dev/null || true)
+        if [ -z "$current" ]; then
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$SHA" > /dev/null
+        elif [ "$current" != "$SHA" ]; then
+          # Forward only: a late run of an older commit never moves the tag back.
+          status=$(gh api "repos/$GITHUB_REPOSITORY/compare/$current...$SHA" --jq .status)
+          if [ "$status" != ahead ]; then echo "$SHA is not ahead of $TAG ($status)"; exit 0; fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" -f sha="$SHA" -F force=true > /dev/null
+        fi
+        echo "$TAG → $SHA"
