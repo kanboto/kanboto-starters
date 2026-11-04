@@ -19,6 +19,10 @@ async def test_probes(client: AsyncClient) -> None:
         health.State.stopping = False
 
 
+async def test_ready_without_a_database(client: AsyncClient, no_database: None) -> None:
+    assert (await client.get("/readyz")).json() == {"status": "ok"}
+
+
 async def test_metrics_use_route_templates(client: AsyncClient) -> None:
     await client.get("/api/v1/items/00000000-0000-0000-0000-000000000000")
     text = (await client.get("/metrics")).text
@@ -34,8 +38,9 @@ async def test_errors_are_problem_json(client: AsyncClient) -> None:
 
 
 def test_openapi_file_is_up_to_date() -> None:
+    package = "api"
     generated = subprocess.run(
-        [sys.executable, "-m", "api", "openapi"], capture_output=True, text=True, check=True
+        [sys.executable, "-m", package, "openapi"], capture_output=True, text=True, check=True
     ).stdout
-    hint = "run: python -m api openapi > openapi/public.yaml"
-    assert generated == Path("openapi/public.yaml").read_text(), hint
+    hint = f"run: python -m {package} openapi > openapi/{package}.yaml"
+    assert generated == Path(f"openapi/{package}.yaml").read_text(), hint

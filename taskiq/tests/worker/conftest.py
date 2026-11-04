@@ -6,10 +6,8 @@ from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 import pytest
 from taskiq import AckableMessage, AsyncBroker, BrokerMessage, InMemoryBroker
 
-# No NATS server in tests: the real broker is created at import but never connected. Nor any database:
-# the example tasks do not use it.
+# No NATS server in tests: the real broker is created at import but never connected.
 os.environ.setdefault("NATS_URL", "nats://localhost:4222")
-os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite://")
 
 from worker import health, tasks  # noqa: E402
 from worker.config import get_settings  # noqa: E402
@@ -17,7 +15,8 @@ from worker.middleware import Observe, Retry  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def settings() -> Iterator[None]:
+def settings(no_database: None) -> Iterator[None]:
+    """Fresh settings, and no database: the example tasks do not use one."""
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

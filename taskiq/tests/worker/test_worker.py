@@ -11,6 +11,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from taskiq import BrokerMessage, TaskiqMessage
 
+# `import common…` sorts before `from <package> import …` whatever the package is named.
+import common.db
 from worker import health, logs, tasks, worker
 from worker.config import get_settings
 
@@ -37,6 +39,17 @@ async def test_probes(client: AsyncClient) -> None:
     assert stopping.status_code == 503 and stopping.json() == {"status": "stopping"}
     assert (await client.get("/api")).status_code == 404
     assert (await client.post("/healthz")).status_code == 405
+
+
+async def test_ready_checks_a_configured_database(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def unreachable(timeout_s: float) -> None:
+        raise ConnectionError("database down")
+
+    health.State.connected = lambda: True
+    monkeypatch.setattr(common.db, "ping", unreachable)
+    assert (await client.get("/readyz")).json() == {"status": "unavailable"}
 
 
 async def test_metrics(client: AsyncClient) -> None:

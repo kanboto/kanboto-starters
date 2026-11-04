@@ -3,13 +3,15 @@
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str
+    # No database when unset: the probes skip it, the commands that need it refuse to run.
+    database_url: str | None = None
     database_read_url: str | None = None  # read replica; the primary when unset
     log_level: str = "INFO"
 
@@ -20,6 +22,12 @@ class Settings(BaseSettings):
     db_max_overflow: int = 5
     db_pool_timeout_s: float = 5
     db_pool_recycle_s: int = 1800
+    ready_timeout_s: float = 2  # readiness: database check
+
+    @field_validator("database_url", "database_read_url")
+    @classmethod
+    def _empty_is_unset(cls, value: str | None) -> str | None:
+        return value or None
 
 
 @lru_cache

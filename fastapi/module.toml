@@ -1,10 +1,9 @@
 package = "api"
 extra = "api"
-files = ["openapi/public.yaml"]
+files = ["openapi/{package}.yaml"]
 
 [env]
 PORT = "8080"
-READY_TIMEOUT_S = "2"
 DRAIN_DELAY_S = "5"
 SHUTDOWN_TIMEOUT_S = "20"
 HTTP_CONNECT_TIMEOUT_S = "3"

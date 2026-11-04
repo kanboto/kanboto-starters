@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     port: int = 8080
-    ready_timeout_s: float = 2  # readiness: database check
 
     # Shutdown: on SIGTERM, /readyz fails for DRAIN_DELAY_S while traffic is still served, then in-flight
     # requests get SHUTDOWN_TIMEOUT_S to complete.

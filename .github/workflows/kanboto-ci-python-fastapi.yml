@@ -116,7 +116,7 @@ jobs:
     - name: Contrat d'API · spec, règles et compatibilité
       run: |
         set -euo pipefail
-        spec=openapi/public.yaml
+        spec=openapi/api.yaml
         if [ ! -f "$spec" ]; then echo "::error title=Contrat d'API::$spec absent"; exit 1; fi
         yq -o=json "$spec" > /tmp/spec.json
         python3 - /tmp/spec.json <<'PY'

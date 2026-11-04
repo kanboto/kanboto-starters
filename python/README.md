@@ -22,7 +22,7 @@ python3 scripts/compose.py ../shop fastapi taskiq     # api/ and worker/, from t
 In a composed project:
 
 ```sh
-cp .env.example .env               # then set DATABASE_URL
+cp .env.example .env               # then set DATABASE_URL, if the project uses a database
 uv sync --all-extras
 uv run python -m api migrate       # apply database migrations (any component has the command)
 uv run python -m api               # one component: serve the API on http://localhost:8080
@@ -53,7 +53,7 @@ All configuration comes from environment variables, each one in `.env.example`. 
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | required | PostgreSQL URL, e.g. `postgresql+asyncpg://user:pass@host:5432/db` |
+| `DATABASE_URL` | unset | PostgreSQL URL, e.g. `postgresql+asyncpg://user:pass@host:5432/db`; no database when unset |
 | `DATABASE_READ_URL` | unset | Read replica URL; reads go to the primary when unset |
 | `LOG_LEVEL` | `INFO` | Log level |
 | `DB_CONNECT_TIMEOUT_S` | `3` | Timeout to open a database connection |
@@ -62,9 +62,11 @@ All configuration comes from environment variables, each one in `.env.example`. 
 | `DB_MAX_OVERFLOW` | `5` | Extra connections allowed under load, per instance |
 | `DB_POOL_TIMEOUT_S` | `5` | Wait for a free connection before failing the request |
 | `DB_POOL_RECYCLE_S` | `1800` | Replace connections older than this |
+| `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
 
-Each component adds its own (see its module's README). Pools are opened on first use, so a component that
-never touches the database opens none. Size them so that `instances × (DB_POOL_SIZE + DB_MAX_OVERFLOW)`
+Each component adds its own (see its module's README). The database is optional: without `DATABASE_URL`, the
+readiness probes skip it and the commands that need it (`migrate`, `cleanup`) stop with exit code 1. Pools
+are opened on first use, so a component that never touches the database opens none. Size them so that `instances × (DB_POOL_SIZE + DB_MAX_OVERFLOW)`
 stays under each database's connection limit, every component included.
 
 ## Container image
@@ -89,7 +91,7 @@ common/              Shared by every component
 ├── services/        Business rules (items is an example)
 ├── schema.py        Migrations, for each component's `migrate` command
 ├── logs.py          JSON logging, request id and task id on every line
-└── metrics.py       Prometheus registry of the process
+└── metrics.py       Prometheus exposition: runtime metrics and a component's registry
 migrations/          Alembic migrations, over common/models
 tests/
 ├── conftest.py      Fresh database per test

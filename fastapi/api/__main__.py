@@ -65,9 +65,12 @@ def migrate() -> None:
 
 def cleanup() -> None:
     """Deletes expired idempotency keys. Run periodically, not on the request path."""
+    from common import db
+
     from . import idempotency
 
     logging.config.dictConfig(logs.config(common_config.get_settings().log_level))
+    db.require("cleanup")
     deleted = asyncio.run(idempotency.purge())
     log.info("idempotency keys purged", extra={"deleted": deleted})
 

@@ -9,7 +9,7 @@ The module is the package `api/` and its tests `tests/api/`; [`module.toml`](mod
 
 ```sh
 python3 scripts/compose.py ../shop fastapi            # api/
-python3 scripts/compose.py ../shop fastapi:hooks      # the same module, as hooks/ (once per project)
+python3 scripts/compose.py ../shop fastapi fastapi:hooks  # two APIs: api/ and hooks/
 ```
 
 ## Getting started
@@ -17,7 +17,7 @@ python3 scripts/compose.py ../shop fastapi:hooks      # the same module, as hook
 In the composed project:
 
 ```sh
-cp .env.example .env               # then set DATABASE_URL
+cp .env.example .env               # then set DATABASE_URL: the example resource needs a database
 uv sync --extra api
 uv run python -m api migrate       # apply database migrations
 uv run python -m api               # serve on http://localhost:8080
@@ -33,7 +33,7 @@ curl -X POST localhost:8080/api/v1/items \
 curl localhost:8080/api/v1/items
 ```
 
-Regenerate the OpenAPI spec after a change to the API: `uv run python -m api openapi > openapi/public.yaml`
+Regenerate the OpenAPI spec after a change to the API: `uv run python -m api openapi > openapi/api.yaml`
 (a test fails when it is out of date). Development commands are in the base's README.
 
 ## Configuration
@@ -44,7 +44,6 @@ the base's README.
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `8080` | Port for the API, the probes and the metrics |
-| `READY_TIMEOUT_S` | `2` | Timeout of the readiness database check |
 | `DRAIN_DELAY_S` | `5` | After `SIGTERM`, time readiness fails while traffic is still served |
 | `SHUTDOWN_TIMEOUT_S` | `20` | Then, grace period for in-flight requests |
 | `HTTP_CONNECT_TIMEOUT_S` | `3` | Outbound HTTP: timeout to connect |
@@ -74,9 +73,9 @@ The project's image runs the API by default when the module comes first, and the
 
 | Path | Purpose |
 |---|---|
-| `/api/v1/...` | Public API, documented in [`openapi/public.yaml`](openapi/public.yaml) |
+| `/api/v1/...` | Public API, documented in [`openapi/api.yaml`](openapi/api.yaml) (`openapi/<package>.yaml`) |
 | `/healthz` | Liveness: the server responds |
-| `/readyz` | Readiness: the database is reachable; `503` as soon as shutdown starts |
+| `/readyz` | Readiness: the database is reachable, when one is configured; `503` as soon as shutdown starts |
 | `/metrics` | Prometheus metrics |
 
 Every response carries an `X-Request-ID` (the caller's, or a generated one), also present on every log line
@@ -99,7 +98,7 @@ api/
 ├── errors.py        RFC 9457 problem details
 ├── idempotency.py   Idempotency-Key handling
 └── pagination.py    Cursor pagination
-openapi/             Generated OpenAPI specification
+openapi/api.yaml     Generated OpenAPI specification (openapi/<package>.yaml)
 tests/api/
 module.toml          How compose.py adds the module (not copied)
 ```

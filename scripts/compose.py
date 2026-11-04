@@ -3,7 +3,7 @@
     python3 scripts/compose.py <dest> <module>[:<package>]...
 
     python3 scripts/compose.py /tmp/shop fastapi taskiq            # api/ and worker/
-    python3 scripts/compose.py /tmp/shop fastapi fastapi:hooks     # two APIs: api/ and hooks/
+    python3 scripts/compose.py /tmp/shop fastapi fastapi:hooks     # two APIs from one module: api/ and hooks/
 
 Kanboto applies the same algorithm when it scaffolds a repository; keep both in step. Standard library only.
 
@@ -14,7 +14,8 @@ Kanboto applies the same algorithm when it scaffolds a repository; keep both in 
      `migrations` or `tests`.
    - copy `<module>/<package>/` to `<dest>/<target>/` and `<module>/tests/<package>/` to
      `<dest>/tests/<target>/`;
-   - `files`: other paths of the module, copied as is (an existing path is an error);
+   - `files`: other paths of the module, copied as is (an existing path is an error); `{package}` in a path
+     stands for the module's package at the source and for the target name at the destination;
    - `extra`: appended to the exec-form `RUN ["uv", "sync", ...]` line of the Dockerfile as
      `"--extra", "<extra>"`, once per extra;
    - `[dockerfile].copy`: one `COPY <path> ./<path>` line each, inserted after the last `COPY` line before
@@ -23,7 +24,9 @@ Kanboto applies the same algorithm when it scaffolds a repository; keep both in 
    - `[env]`: `KEY=value` lines appended to `.env.example`, unless the key is already there;
    - `[rename].files`: globs, relative to `<dest>`, of the only files where the package name is rewritten,
      when the target name differs: see `rename()`.
-   In `copy`, `cmd` and `[rename].files`, `{package}` stands for the target name.
+   In `copy`, `cmd` and `[rename].files`, `{package}` stands for the target name. A module can be added
+   several times under different names: its package keeps its state (settings, metrics registry, loggers)
+   to itself.
 
 A module's package imports itself relatively and never spells its own name, so renaming its folder is enough;
 its tests import it by name, hence the rewrite.
@@ -99,10 +102,11 @@ def add_module(dest: Path, spec: str, first: bool) -> None:
     shutil.copytree(ROOT / module / source, dest / target, ignore=IGNORE)
     shutil.copytree(ROOT / module / "tests" / source, dest / "tests" / target, ignore=IGNORE)
     for name in manifest.get("files", []):
-        if (dest / name).exists():
-            sys.exit(f"{spec}: {name} already exists in {dest}")
-        (dest / name).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / module / name, dest / name)
+        to = dest / fill(name)
+        if to.exists():
+            sys.exit(f"{spec}: {fill(name)} already exists in {dest}")
+        to.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / module / name.replace("{package}", source), to)
 
     docker = manifest.get("dockerfile", {})
     cmd = [fill(arg) for arg in docker["cmd"]] if first and "cmd" in docker else None

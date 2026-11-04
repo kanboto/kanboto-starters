@@ -6,11 +6,10 @@ import logging
 import logging.config
 
 import pytest
-from prometheus_client import REGISTRY
 from pydantic import ValidationError
 from taskiq import BrokerMessage
 
-from worker import logs, tasks
+from worker import logs, metrics, tasks
 from worker.config import get_settings
 from worker.tasks import Item
 
@@ -18,7 +17,7 @@ from .conftest import Memory
 
 
 def _count(name: str, **labels: str) -> float:
-    return REGISTRY.get_sample_value(name, labels) or 0
+    return metrics.REGISTRY.get_sample_value(name, labels) or 0
 
 
 def _records(caplog: pytest.LogCaptureFixture, message: str) -> list[logging.LogRecord]:

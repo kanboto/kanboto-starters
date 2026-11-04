@@ -25,7 +25,7 @@ More stacks are on the way: a static Vue.js frontend next, then Spring Boot, Qua
 ```sh
 python3 scripts/compose.py <dest> <module>[:<package>]...
 python3 scripts/compose.py ../shop fastapi taskiq         # api/ and worker/, one image
-python3 scripts/compose.py ../shop fastapi:hooks taskiq  # the API as hooks/, and worker/
+python3 scripts/compose.py ../shop fastapi fastapi:hooks  # two APIs from one module: api/ and hooks/
 ```
 
 [`scripts/compose.py`](scripts/compose.py) (standard library only) copies the base, then, for each module, its
@@ -34,8 +34,9 @@ package and its tests under the chosen name, and applies its `module.toml`: the 
 package name rewritten in its tests. Kanboto applies the same algorithm, documented at the top of the script.
 
 A module's package imports itself relatively and never spells its own name, so it can be copied under any
-name. Every component runs from the same image as `python -m <package>`. A module comes at most once per
-project for now: two copies would share `openapi/public.yaml` and their Prometheus metric names.
+name, as many times as needed: each copy keeps its settings, its Prometheus registry, its loggers and its
+OpenAPI spec (`openapi/<package>.yaml`) to itself. Every component runs from the same image as
+`python -m <package>`. The database is optional: without `DATABASE_URL`, nothing opens a pool.
 
 ## Standards
 

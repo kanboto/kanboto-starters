@@ -1,6 +1,7 @@
 name: Compositions
-# The Python base composed with several modules, as Kanboto scaffolds a repository: every module together, and
-# a module copied under another package name. One module alone is checked by its CI kit (kanboto-ci-python-*).
+# The Python base composed with several modules, as Kanboto scaffolds a repository: every module together, a
+# module copied under another package name, and one module twice. One module alone is checked by its CI kit
+# (kanboto-ci-python-*).
 'on':
   pull_request: null
   push:
@@ -26,6 +27,9 @@ jobs:
           extras: --extra api --extra worker
         - name: fastapi-renamed
           modules: fastapi:hooks
+          extras: --extra api
+        - name: fastapi-twice
+          modules: fastapi fastapi:hooks
           extras: --extra api
     services:
       postgres:

@@ -119,7 +119,7 @@ other commands:
 | Path | Purpose |
 |---|---|
 | `/healthz` | Liveness: the process responds |
-| `/readyz` | Readiness: connected to NATS and consuming; `503` as soon as shutdown starts |
+| `/readyz` | Readiness: connected to NATS and consuming, and the database reachable when one is configured; `503` as soon as shutdown starts |
 | `/metrics` | Prometheus metrics: runtime, `tasks_total`, `task_duration_seconds`, `tasks_dead_lettered_total` |
 
 Every log line written while a task runs carries its `task_id`, kept across retries.

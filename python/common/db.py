@@ -1,20 +1,26 @@
 """Database: the only state of the components, which keep nothing in memory between requests or tasks.
 
 Models live in `common/models/`, on `Base`. An API takes its sessions through the dependencies of its
-`deps.py`; any other code opens one from `sessionmaker()` or `read_sessionmaker()`.
+`deps.py`; any other code opens one from `sessionmaker()` or `read_sessionmaker()`. The database is optional:
+without `DATABASE_URL`, `engines()` is empty and opening a session raises `NotConfiguredError`.
 """
 
+import asyncio
+import logging
+import sys
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 
-from sqlalchemy import DateTime, Dialect, TypeDecorator, event
+from sqlalchemy import DateTime, Dialect, TypeDecorator, event, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Session
 
 from common.config import get_settings
+
+log = logging.getLogger(__name__)
 
 
 def utcnow() -> datetime:
@@ -70,11 +76,29 @@ def _engine(url: str, *, read_only: bool) -> AsyncEngine:
     )
 
 
+class NotConfiguredError(RuntimeError):
+    pass
+
+
+def configured() -> bool:
+    return get_settings().database_url is not None
+
+
+def require(command: str) -> None:
+    """Stops a command that needs the database when none is configured: a clear log line, exit code 1."""
+    if not configured():
+        log.error("DATABASE_URL is not set: %s needs a database", command)
+        sys.exit(1)
+
+
 @lru_cache
 def engine() -> AsyncEngine:
     """Primary database, for writes. Created on first use: the service starts even when the database is
     down (`/readyz` reports it)."""
-    return _engine(get_settings().database_url, read_only=False)
+    url = get_settings().database_url
+    if url is None:
+        raise NotConfiguredError("DATABASE_URL is not set")
+    return _engine(url, read_only=False)
 
 
 @lru_cache
@@ -86,14 +110,23 @@ def read_engine() -> AsyncEngine:
 
 
 def engines() -> list[AsyncEngine]:
-    return list(dict.fromkeys([engine(), read_engine()]))
+    """The pools of the configured databases; none without `DATABASE_URL`."""
+    return list(dict.fromkeys([engine(), read_engine()])) if configured() else []
+
+
+async def ping(timeout_s: float) -> None:
+    """Raises unless every configured database answers within `timeout_s`; nothing to check without one."""
+    async with asyncio.timeout(timeout_s):
+        for pool in engines():
+            async with pool.connect() as connection:
+                await connection.execute(text("SELECT 1"))
 
 
 async def dispose() -> None:
     """Closes the pools opened so far, at shutdown; a component that never used the database opens none."""
-    if engine.cache_info().currsize or read_engine.cache_info().currsize:
-        for pool in engines():
-            await pool.dispose()
+    pools = [cached() for cached in (engine, read_engine) if cached.cache_info().currsize]
+    for pool in dict.fromkeys(pools):
+        await pool.dispose()
 
 
 class ReadOnlyError(RuntimeError):

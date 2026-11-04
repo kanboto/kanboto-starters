@@ -1,18 +1,23 @@
-"""Prometheus metrics of the API: HTTP requests, on the process registry of `common.metrics` (runtime
-metrics included). One process per container: scale out with more instances, not uvicorn workers.
+"""Prometheus metrics of the API: HTTP requests, on the registry of this package, served with the runtime
+metrics (`common.metrics`). One process per container: scale out with more instances, not uvicorn workers.
 """
 
 import re
 
 from fastapi import FastAPI, Response
-from prometheus_client import Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Histogram
 
 from common import metrics as process
 
-REQUESTS = Counter("http_requests_total", "HTTP requests handled", ["method", "route", "status"])
-LATENCY = Histogram("http_request_duration_seconds", "HTTP request duration", ["method", "route"])
+REGISTRY = CollectorRegistry()
+REQUESTS = Counter(
+    "http_requests_total", "HTTP requests handled", ["method", "route", "status"], registry=REGISTRY
+)
+LATENCY = Histogram(
+    "http_request_duration_seconds", "HTTP request duration", ["method", "route"], registry=REGISTRY
+)
 # Example business metric: replace it with your domain's.
-ITEMS_CREATED = Counter("items_created_total", "Items created")
+ITEMS_CREATED = Counter("items_created_total", "Items created", registry=REGISTRY)
 
 UNTRACKED = {"/healthz", "/readyz", "/metrics"}
 
@@ -38,5 +43,5 @@ def observe(method: str, route: str, status: int, duration: float) -> None:
 
 
 def exposition() -> Response:
-    body, media_type = process.exposition()
+    body, media_type = process.exposition(REGISTRY)
     return Response(body, media_type=media_type)

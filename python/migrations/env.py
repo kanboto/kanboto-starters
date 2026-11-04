@@ -25,7 +25,10 @@ def run(connection: Connection) -> None:
 
 
 async def online() -> None:
-    engine = create_async_engine(get_settings().database_url)
+    url = get_settings().database_url
+    if url is None:
+        raise SystemExit("DATABASE_URL is not set: nothing to migrate")
+    engine = create_async_engine(url)
     async with engine.connect() as connection:
         await connection.run_sync(run)
     await engine.dispose()

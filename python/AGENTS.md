@@ -111,7 +111,7 @@ One Python project, one image, several components: each component is a package r
 - `api/health.py`, `api/middleware.py`, `api/metrics.py`, `api/errors.py`, `api/idempotency.py`,
   `api/pagination.py`, `api/deprecation.py` and `api/outbound.py` implement the contracts; keep them. Sessions
   come from `api/deps.py` (`ReadSession`, `WriteSession`), over the pools of `common/db.py`.
-- `openapi/public.yaml` follows the code: `python -m api openapi > openapi/public.yaml`; migrations run through
+- `openapi/<package>.yaml` follows the code: `python -m api openapi > openapi/api.yaml`; migrations run through
   `python -m api migrate`.
 
 ### Worker component (`worker/` by default, TaskIQ and NATS JetStream)
