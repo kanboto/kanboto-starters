@@ -39,7 +39,8 @@ jobs:
         for check in $CHECKS; do
           [[ " $ok " == *" $check "* ]] || { echo "$check not green yet on $SHA"; exit 0; }
         done
-        current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha 2>/dev/null || true)
+        # A missing tag answers 404 with its JSON body on stdout: keep only a commit SHA.
+        current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha 2>/dev/null | grep -xE '[0-9a-f]{40}' || true)
         if [ -z "$current" ]; then
           gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$SHA" > /dev/null
         elif [ "$current" != "$SHA" ]; then
