@@ -34,7 +34,7 @@ jobs:
       with:
         python-version: '3.13'
     - name: Dépendances
-      run: uv sync --locked
+      run: uv sync --locked --all-extras
     - name: Lint · uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915
       run: uv run ruff check . --extend-select C901,PLR0911,PLR0912,PLR0913,PLR0915
     - name: Lint · uv run ruff format --check .
