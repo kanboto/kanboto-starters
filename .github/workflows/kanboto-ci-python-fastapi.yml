@@ -67,10 +67,14 @@ jobs:
         rm -f "$RUNNER_TEMP/scan-base.json"
         if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
           git worktree add --detach "$RUNNER_TEMP/kanboto-base" "$BASE" >/dev/null
-        docker run --rm -v "$RUNNER_TEMP/kanboto-base":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
-          ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
-          --db-repository ghcr.io/kanboto/trivy-db:2 \
-          --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-base.json python
+          if [ -e "$RUNNER_TEMP/kanboto-base/python" ]; then
+          docker run --rm -v "$RUNNER_TEMP/kanboto-base":/src:ro -w /src -v "$RUNNER_TEMP:/out" -v "$RUNNER_TEMP/trivy:/cache" \
+            ghcr.io/kanboto/trivy:stable fs --cache-dir /cache --skip-version-check \
+            --db-repository ghcr.io/kanboto/trivy-db:2 \
+            --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json --output /out/scan-base.json python
+          else
+            echo '{}' > "$RUNNER_TEMP/scan-base.json"  # python absent de la base : rien n'y était
+          fi
           git worktree remove --force "$RUNNER_TEMP/kanboto-base"
         else
           echo "Base de comparaison introuvable ($BASE) : scan informatif"
