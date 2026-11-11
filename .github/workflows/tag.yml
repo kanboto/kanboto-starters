@@ -9,6 +9,7 @@ name: Tag
     - Kanboto CI · Node.js (nuxt)
     - Kanboto CI · Python (fastapi)
     - Kanboto CI · Python (taskiq)
+    - Kanboto CI · Python (tasks)
     types:
     - completed
     branches:
@@ -28,7 +29,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: v1
-      CHECKS: kanboto-ci-node-nuxt kanboto-ci-python-fastapi kanboto-ci-python-taskiq
+      CHECKS: kanboto-ci-node-nuxt kanboto-ci-python-fastapi kanboto-ci-python-taskiq kanboto-ci-python-tasks
       SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
     - name: Move the tag to this commit once every required check is green

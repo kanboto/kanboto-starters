@@ -16,6 +16,7 @@ components (an API, a worker...) together in one project, one lock and one image
 | Python 3.13, uv, SQLAlchemy, PostgreSQL | Base: shared business code and plumbing | [`python/`](python/) |
 | FastAPI | Module: HTTP API (`api/`) | [`fastapi/`](fastapi/) |
 | TaskIQ + NATS JetStream | Module: background worker (`worker/`) | [`taskiq/`](taskiq/) |
+| Scheduled tasks | Module: commands run on a schedule (`tasks/`) | [`tasks/`](tasks/) |
 | Nuxt (Node.js 24, npm) | Web frontend, rendered on the server (SSR) | [`nuxt/`](nuxt/) |
 
 More stacks are on the way: a static Vue.js frontend next, then Spring Boot, Quarkus and Go.

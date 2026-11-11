@@ -74,6 +74,14 @@ Rules in priority order: when two conflict, the first one wins.
 - A failed task is retried up to `MAX_RETRIES` times, then kept as a dead letter, never lost.
 - At most `WORKER_CONCURRENCY` tasks run at once in an instance.
 
+### Scheduled tasks
+
+- A scheduled task is the `run()` coroutine of `tasks/jobs/<name>.py`, run by `python -m tasks <name>` on its
+  schedule: it starts, does its work through `common/`, and exits. The runner gives it one run at a time, a
+  bound of `TASK_TIMEOUT_S` and its exit code; the task itself stays idempotent, as it may run again after a
+  failure.
+- A scheduled task never serves requests nor runs in a loop: work that waits for an event belongs to a worker.
+
 ### API
 
 - Public routes under `/api/v<N>/`, internal routes under `/internal/v<N>/`; only the major version appears in

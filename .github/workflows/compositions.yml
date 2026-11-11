@@ -25,6 +25,9 @@ jobs:
         - name: fastapi-taskiq
           modules: fastapi taskiq
           extras: --extra api --extra worker
+        - name: fastapi-tasks
+          modules: fastapi tasks
+          extras: --extra api --extra tasks
         - name: fastapi-renamed
           modules: fastapi:hooks
           extras: --extra api

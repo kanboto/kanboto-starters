@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 2
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -1493,7 +1493,7 @@ requires-dist = [
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.54,<1" },
     { name = "uvicorn", marker = "extra == 'worker'", specifier = ">=0.54,<1" },
 ]
-provides-extras = ["api", "worker"]
+provides-extras = ["api", "worker", "tasks"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -1,0 +1,13 @@
+package = "tasks"
+extra = "tasks"
+files = []
+
+[env]
+TASK_TIMEOUT_S = "300"
+
+[dockerfile]
+copy = ["{package}"]
+cmd = ["{package}"]
+
+[rename]
+files = ["tests/{package}/**/*.py"]
