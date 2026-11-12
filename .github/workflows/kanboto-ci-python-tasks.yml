@@ -177,27 +177,12 @@ jobs:
         if [ ! -f .env.example ]; then fail ".env.example absent : chaque variable lue doit y figurer"; fi
         user=$(docker image inspect --format '{{.Config.User}}' kanboto-ci-image)
         case "$user" in ""|root|0|0:*) fail "l'image tourne en root : déclarer un USER non-root";; esac
-        docker run -d --name app --read-only --tmpfs /tmp --env-file .env.example -e PORT=8080 -p 8080:8080 \
-          kanboto-ci-image >/dev/null
-        code=000
-        for _ in $(seq 1 30); do
-          code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/healthz || true)
-          if [ "$code" = 200 ]; then break; fi
-          if [ "$(docker inspect -f '{{.State.Running}}' app)" != true ]; then
-            fail "le conteneur s'arrête au démarrage (lecture seule, variables de .env.example)"
-          fi
-          sleep 1
-        done
-        if [ "$code" != 200 ]; then fail "/healthz ne répond pas 200 ($code)"; fi
-        code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/readyz || true)
-        case "$code" in 200|503) ;; *) fail "/readyz doit répondre 200 ou 503 ($code)";; esac
-        curl -sf localhost:8080/metrics | grep -q '^# TYPE ' || fail "/metrics ne rend pas le format Prometheus"
-        start=$(date +%s)
-        docker stop -t 30 app >/dev/null
-        elapsed=$(( $(date +%s) - start ))
-        status=$(docker inspect -f '{{.State.ExitCode}}' app)
-        if [ "$elapsed" -ge 30 ]; then fail "SIGTERM ignoré : le conteneur a été tué au bout de 30 s"; fi
-        case "$status" in 0|143) ;; *) fail "code de sortie $status après SIGTERM";; esac
+        docker run -d --name app --read-only --tmpfs /tmp --env-file .env.example kanboto-ci-image >/dev/null
+        status=$(timeout 60 docker wait app || echo timeout)
+        if [ "$status" = timeout ]; then fail "la commande par défaut ne s'arrête pas en 60 s"; fi
+        if [ "$status" != 0 ]; then
+          fail "la commande par défaut sort en $status (lecture seule, variables de .env.example)"
+        fi
         docker logs app 2>&1 | python3 -c 'import json, sys
         bad = []
         for line in sys.stdin.read().splitlines():
@@ -210,4 +195,4 @@ jobs:
             print(f"{len(bad)} ligne(s) de log hors JSON, dont : {bad[0][:200]}")
         sys.exit(1 if bad else 0)
         ' || fail "logs hors JSON sur la sortie standard"
-        echo "Contrat d'exécution respecté : arrêt propre en $elapsed s"
+        echo "Contrat d'exécution respecté : les tâches se chargent en lecture seule"

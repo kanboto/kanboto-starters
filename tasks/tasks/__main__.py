@@ -1,5 +1,5 @@
 """Image entrypoint: `<name>` runs the scheduled task `jobs/<name>.py`, `migrate` applies the database
-migrations."""
+migrations; without an argument (the image's default command), every task is loaded and listed."""
 
 import argparse
 import asyncio
@@ -21,9 +21,11 @@ def migrate() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog=f"python -m {__package__}")
-    parser.add_argument("task", help="the task to run, `jobs/<task>.py`, or `migrate`")
+    parser.add_argument("task", nargs="?", help="the task to run, `jobs/<task>.py`, or `migrate`")
     args = parser.parse_args()
     logging.config.dictConfig(logs.config(common_config.get_settings().log_level))
+    if args.task is None:
+        sys.exit(runner.check())
     if args.task == "migrate":
         migrate()
         return

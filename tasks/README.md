@@ -36,6 +36,7 @@ cp .env.example .env
 uv sync --extra tasks
 uv run python -m tasks example     # runs tasks/jobs/example.py
 uv run python -m tasks migrate     # applies the database migrations
+uv run python -m tasks             # loads every task and lists them (the image's default command)
 ```
 
 The runner gives every run:

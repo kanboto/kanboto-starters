@@ -1,6 +1,6 @@
 """Runs one task under the contract every scheduled task gets: one run at a time, a bounded duration, one log
 line for the outcome and an exit code the platform reads (0: done, 1: failed, 2: unknown task, 3: another run
-still holds the lock).
+still holds the lock). Without a name, `check()` loads every task and exits.
 
 The lock is a PostgreSQL advisory lock on the task's name, held for the whole run, when the database is
 configured; the platform never starts two runs of a task at once, the lock also covers manual runs."""
@@ -8,6 +8,7 @@ configured; the platform never starts two runs of a task at once, the lock also 
 import asyncio
 import importlib
 import logging
+import pkgutil
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -40,6 +41,19 @@ def find(name: str) -> Callable[[], Awaitable[None]] | None:
         raise
     found = getattr(module, "run", None)
     return found if callable(found) else None
+
+
+def check() -> int:
+    """Loads every module of `jobs/` and logs the tasks found: the image's default command, which proves it
+    starts and its tasks import. 1 when a module has no `run()`."""
+    jobs = importlib.import_module(f"{__package__}.jobs")
+    names = sorted(m.name for m in pkgutil.iter_modules(jobs.__path__) if not m.name.startswith("_"))
+    broken = [name for name in names if find(name) is None]
+    if broken:
+        log.error("tasks without run()", extra={"tasks": broken})
+        return FAILED
+    log.info("tasks", extra={"tasks": names})
+    return DONE
 
 
 @asynccontextmanager

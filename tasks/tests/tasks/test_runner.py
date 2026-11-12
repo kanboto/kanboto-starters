@@ -4,6 +4,7 @@ import logging
 import sys
 import types
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
@@ -89,3 +90,16 @@ async def test_a_second_run_waits_for_the_first(database: None) -> None:
         assert await runner.run("tidy") == runner.LOCKED
         await holder.execute(text("SELECT pg_advisory_unlock(hashtext('task:tidy'))"))
     assert await runner.run("tidy") == runner.DONE
+
+
+def test_the_default_command_loads_every_task(caplog: pytest.LogCaptureFixture) -> None:
+    folder = Path(runner.__file__).parent / "jobs"
+    expected = sorted(p.stem for p in folder.glob("*.py") if not p.stem.startswith("_"))
+    assert runner.check() == runner.DONE
+    record = next(r for r in caplog.records if r.getMessage() == "tasks")
+    assert json.loads(logs.JsonFormatter().format(record))["tasks"] == expected
+
+
+def test_a_task_without_run_fails_the_default_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(runner, "find", lambda name: None)
+    assert runner.check() == runner.FAILED

@@ -81,6 +81,8 @@ Rules in priority order: when two conflict, the first one wins.
   bound of `TASK_TIMEOUT_S` and its exit code; the task itself stays idempotent, as it may run again after a
   failure.
 - A scheduled task never serves requests nor runs in a loop: work that waits for an event belongs to a worker.
+- `python -m tasks` without a name imports every task and exits: importing a task has no side effect and reads
+  no service.
 
 ### API
 
