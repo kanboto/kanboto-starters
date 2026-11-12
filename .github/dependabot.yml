@@ -6,11 +6,10 @@ updates:
   - /nuxt
   - /python
   schedule:
-    interval: weekly
-    day: monday
+    interval: daily
     time: "06:00"
   cooldown:
-    default-days: 3
+    default-days: 2
   groups:
     kanboto-maintenance:
       applies-to: version-updates
@@ -26,11 +25,10 @@ updates:
   directories:
   - /nuxt
   schedule:
-    interval: weekly
-    day: monday
+    interval: daily
     time: "06:00"
   cooldown:
-    default-days: 3
+    default-days: 2
   groups:
     kanboto-securite:
       applies-to: security-updates
@@ -51,11 +49,10 @@ updates:
   directories:
   - /python
   schedule:
-    interval: weekly
-    day: monday
+    interval: daily
     time: "06:00"
   cooldown:
-    default-days: 3
+    default-days: 2
   groups:
     kanboto-securite:
       applies-to: security-updates
