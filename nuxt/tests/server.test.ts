@@ -10,6 +10,7 @@ await setup({
   rootDir: fileURLToPath(new URL('..', import.meta.url)),
   env: {
     NUXT_PUBLIC_APP_NAME: 'Acme Console',
+    NUXT_APP_SECRET: 'a-test-secret-of-at-least-32-characters',
     LOG_LEVEL: 'info',
     DRAIN_DELAY_S: '1',
     SHUTDOWN_TIMEOUT_S: '5',
@@ -40,6 +41,15 @@ describe('home page', () => {
     expect([legacy.status, legacy.headers.get('location')]).toEqual([301, '/favicon.svg'])
     await expect.poll(() => logs().filter(l => l.logger === 'access').map(l => l.route)).toContain('/favicon.svg')
     expect(logs().some(l => l.route === 'unmatched')).toBe(false)
+  })
+})
+
+describe('search engines, outside production', () => {
+  it('keep every page out of the index unless the environment says otherwise', async () => {
+    expect(await $fetch<string>('/robots.txt')).toMatch(/^Disallow: \/$/m)
+    const home = await fetch('/')
+    expect(home.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    expect(await home.text()).toContain('<meta name="robots" content="noindex, nofollow">')
   })
 })
 

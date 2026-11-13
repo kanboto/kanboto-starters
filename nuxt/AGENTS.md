@@ -46,6 +46,30 @@ Rules in priority order: when two conflict, the first one wins.
 7. **Nothing dead.** No commented-out code, no unused function or parameter, no TODO without a ticket.
    Comments explain why, never what the code already says.
 
+### Search engines
+
+- Every public page is rendered on the server and sets its own `title`, `description`, `ogTitle` and
+  `ogDescription` through `useSeoMeta()`, with exactly one `h1`; `app/app.vue` adds what every page shares
+  (site name, canonical address, language).
+- The signed-in area lives under `/app/`: rendered in the browser, never indexed, left out of the sitemap. A
+  public page renders without a session.
+- Only production is indexable, decided by `NUXT_PUBLIC_SITE_INDEXABLE`; never force indexing in code. Public
+  pages built from data (one per record) are added to the sitemap through a sitemap source.
+- Links between pages are `<NuxtLink>` with descriptive text; every image has an `alt`, a `width` and a
+  `height`.
+- `tests/seo.test.ts` checks every page of the sitemap: extend it, never skip a page to make it pass.
+
+### Design
+
+- Every style value (colour, font, size, spacing, radius, shadow, duration) comes from
+  `app/assets/design/tokens.css` through `var(--…)`; never a literal value outside that file. The variable
+  names are fixed by Kanboto: a value that is missing is added to `tokens.css` and `tokens.json` together.
+- `tokens.css` and `tokens.json` hold the same values: `tokens.json` feeds the fonts (fetched at build time
+  from Google Fonts, never at runtime) and the share image. When `.kanboto/design/` holds the project's visual
+  direction, its `tokens.css`, `tokens.json` and charter prevail over them.
+- Every public page has a share image (`og:image`, 1200×630) drawn by `app/components/OgImage/` from its title
+  and description; a page changes them with `defineOgImage()`. The template uses token values only.
+
 ### Commands
 
 - Install: `npm ci`
@@ -57,7 +81,8 @@ Rules in priority order: when two conflict, the first one wins.
 
 - `app/` is the Vue application, rendered on the server: `app/pages/` holds the pages (file-based routing),
   `app/app.vue` the root component, `app/composables/` the composables. `pages/index.vue` is an example page:
-  replace it with your domain's, keeping its conventions (sober plain CSS, no secret in the page).
+  replace it with your domain's, keeping its conventions (plain CSS on the design tokens, no secret in the
+  page).
 - The application's name comes from `NUXT_PUBLIC_APP_NAME` (`runtimeConfig.public.appName`), shown on the home
   page and as the page title. When scaffolding a project from this starter, set its default in
   `nuxt.config.ts` and its value in `.env.example` to the project's name.
@@ -65,6 +90,15 @@ Rules in priority order: when two conflict, the first one wins.
   its `NUXT_*` variable, listed in `.env.example` and in the README. Read it with `useRuntimeConfig()`, never
   `process.env` and never a value baked in at build time: one image serves every environment. Keys under
   `public` reach the browser; a secret goes at the top level of `runtimeConfig`, read on the server only.
+- Search engines: `@nuxtjs/robots`, `@nuxtjs/sitemap` and `nuxt-schema-org` read `runtimeConfig.public.site`
+  (`NUXT_PUBLIC_SITE_*`). Each page sets its title and description with `useSeoMeta()`; `app/app.vue` adds the
+  canonical address, the language and the Open Graph defaults, `server/plugins/site.ts` the site's name. When
+  scaffolding, set `NUXT_PUBLIC_SITE_DEFAULT_LOCALE` to the language of the pages.
+- Design: `app/assets/design/tokens.css` (every style reads it) and `tokens.json` (read by `nuxt.config.ts` for
+  the fonts, by the share image template and by the tab icon). The share image is
+  `app/components/OgImage/Page.takumi.vue`, declared once in `app/app.vue` (`defineOgImage('Page')`); Takumi
+  lays it out like flexbox, with inline styles. Its addresses are signed with `NUXT_APP_SECRET`
+  (`runtimeConfig.appSecret`).
 - The backend API is called through `useApi()` (`app/composables/useApi.ts`): its address and timeout come
   from the runtime config. Each other service gets its own `NUXT_*` variable.
 - `server/` is the Nitro server. `server/routes/` holds the probes and the metrics endpoint;

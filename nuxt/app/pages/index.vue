@@ -1,5 +1,12 @@
 <script setup lang="ts">
 const { appName } = useRuntimeConfig().public
+
+useSeoMeta({
+  title: appName,
+  description: 'Hello world',
+  ogTitle: appName,
+  ogDescription: 'Hello world',
+})
 </script>
 
 <template>
@@ -17,21 +24,22 @@ const { appName } = useRuntimeConfig().public
   justify-content: center;
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 0 16px;
+  padding: 0 var(--gutter);
   box-sizing: border-box;
   text-align: center;
 }
 
 h1 {
   margin: 0;
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-2xl), 8vw, var(--text-3xl));
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
 }
 
 p {
-  margin: 0.75rem 0 0;
-  font-size: 1.125rem;
-  opacity: 0.6;
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-lg);
+  color: var(--color-muted);
 }
 </style>
