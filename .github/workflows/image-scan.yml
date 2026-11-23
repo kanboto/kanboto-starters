@@ -2,7 +2,8 @@ name: Image scan
 # Every vulnerability with a fix in the starters' built images, Trivy from the mirror as in the CI kits. Daily,
 # after mirror-images refreshes the vulnerability database: a red run means a fix exists, to bring into the
 # starter before a new project inherits it (refresh the base digest with Dependabot's "Check for updates",
-# or fix the Dockerfile). The CI kits only block what a pull request introduces.
+# or fix the Dockerfile). The CI kits only block what a pull request introduces. A fix published by Debian but
+# not yet in the distroless base goes in .trivyignore.yaml, with an expiry date.
 'on':
   schedule:
   - cron: '0 10 * * *'
@@ -43,6 +44,7 @@ jobs:
         set -euo pipefail
         mkdir -p "$RUNNER_TEMP/trivy"
         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy:/cache" \
+          -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
           ghcr.io/kanboto/trivy:stable image --cache-dir /cache --skip-version-check \
-          --db-repository ghcr.io/kanboto/trivy-db:2 \
+          --db-repository ghcr.io/kanboto/trivy-db:2 --ignorefile /trivyignore.yaml \
           --scanners vuln --ignore-unfixed --exit-code 1 starter-image
