@@ -6,7 +6,7 @@ FROM ghcr.io/astral-sh/uv:0.12.24@sha256:3af4716e991d6956a41e573eab705d0ee08500c
 
 # The runtime image, as root: the virtual environment is built with the very interpreter it runs on. No shell
 # in distroless, hence the exec form of RUN.
-FROM gcr.io/distroless/python3-debian13:latest@sha256:4d4b3e43e67a4d3e149d68d30a68b7d48c289e4e1dabf8201271e6252805c9dd AS build
+FROM gcr.io/distroless/python3-debian13:latest@sha256:7fa0d47901299aa0017c9ef24b8306f72567889977242dce2316b5cb81a06a1f AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never UV_PYTHON=/usr/bin/python3.13
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY common ./common
 COPY migrations ./migrations
 COPY alembic.ini ./
 
-FROM gcr.io/distroless/python3-debian13:nonroot@sha256:806765f9f0863a1f36ce5f796983fed4eced9ec367e67e2f62f57f3e325c60b6
+FROM gcr.io/distroless/python3-debian13:nonroot@sha256:72de1dda9d4c52c370e2ef2d93c28e3e1a8193c92058b7dfa42bace38a83d114
 WORKDIR /app
 COPY --from=build --chown=root:root /app /app
 ENV PATH=/app/.venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
