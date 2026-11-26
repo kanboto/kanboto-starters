@@ -23,7 +23,6 @@ jobs:
         ghcr.io/hadolint/hadolint            hadolint:stable  hadolint/hadolint
         ghcr.io/aquasecurity/trivy           trivy:stable     aquasecurity/trivy
         ghcr.io/aquasecurity/trivy-db:2      trivy-db:2
-        ghcr.io/aquasecurity/trivy-checks:2  trivy-checks:2
         tufin/oasdiff                        oasdiff:stable   oasdiff/oasdiff
         postgres:17-alpine                   postgres:17-alpine
         node:24-trixie-slim                  node:24-trixie-slim
