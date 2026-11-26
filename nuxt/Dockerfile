@@ -10,7 +10,7 @@ COPY . .
 RUN npm run build
 
 # `.output` is self-contained: the server and the few dependencies it uses, traced by Nitro.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:39b0407357c9fadf1a9708d22088f02de21f0e1e8a688474eea2d8701e7d5693
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:675c532423b908f9e56f9d60a4e62309b63cd2a3175acb90a46b96f7ee68e121
 WORKDIR /app
 COPY --from=build --chown=root:root /app/.output ./.output
 ENV NODE_ENV=production PORT=8080
