@@ -1,0 +1,81 @@
+/* Section kit: shadcn's base variables, set from the design tokens and scoped to `.kb-root` (the root of
+   `KbPage`), so the same folder renders with any project's tokens wherever it is dropped. The tokens
+   (`--color-*`, `--font-*`, `--radius-*`, `--space-*`…) are read, never redefined. */
+@layer base {
+  .kb-root {
+    --background: var(--color-bg);
+    --foreground: var(--color-text);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text);
+    --popover: var(--color-bg);
+    --popover-foreground: var(--color-text);
+    --primary: var(--color-action);
+    --primary-foreground: var(--color-action-text);
+    --secondary: var(--color-surface);
+    --secondary-foreground: var(--color-text);
+    --muted: var(--color-surface);
+    --muted-foreground: var(--color-muted);
+    --accent: var(--color-surface);
+    --accent-foreground: var(--color-text);
+    --destructive: var(--color-danger);
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-focus);
+    /* `rounded-md` is `calc(var(--radius) - 2px)`: it lands on the token. The kit's own classes read the
+       tokens directly (`rounded-(--radius-lg)`). */
+    --radius: calc(var(--radius-md) + 2px);
+    --spacing: var(--space-1);
+    --font-sans: var(--font-body);
+
+    color: var(--foreground);
+    background-color: var(--background);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+  }
+
+  .kb-root,
+  .kb-root :where(*, ::before, ::after, ::backdrop) {
+    border-color: var(--border);
+  }
+
+  .kb-root :where(h1, h2, h3) {
+    font-family: var(--font-display);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  .kb-root :where(p, li, dd, blockquote, figcaption) {
+    text-wrap: pretty;
+    overflow-wrap: break-word;
+  }
+
+  /* `settings.tone`: a section re-declares the base variables, every class inside follows. */
+  .kb-root .kb-tone-surface {
+    --background: var(--color-surface);
+    --card: var(--color-bg);
+    --muted: var(--color-bg);
+    --secondary: var(--color-bg);
+    --accent: var(--color-bg);
+  }
+
+  .kb-root .kb-tone-inverse {
+    --background: var(--color-action);
+    --foreground: var(--color-action-text);
+    --card: color-mix(in srgb, var(--color-action-text) 8%, var(--color-action));
+    --card-foreground: var(--color-action-text);
+    --primary: var(--color-action-text);
+    --primary-foreground: var(--color-action);
+    --secondary: var(--card);
+    --secondary-foreground: var(--color-action-text);
+    --muted: var(--card);
+    --muted-foreground: color-mix(in srgb, var(--color-action-text) 72%, var(--color-action));
+    --accent: var(--card);
+    --accent-foreground: var(--color-action-text);
+    --border: color-mix(in srgb, var(--color-action-text) 24%, var(--color-action));
+    --input: var(--border);
+    --ring: var(--color-action-text);
+  }
+}

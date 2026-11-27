@@ -1,6 +1,7 @@
 // Application configuration. Values under `runtimeConfig` are defaults: each one is overridden at runtime by
 // its `NUXT_*` environment variable (`public.appName` by `NUXT_PUBLIC_APP_NAME`), so one build serves every
 // environment. Nothing here is read from the environment at build time.
+import tailwindcss from '@tailwindcss/vite'
 import tokens from './app/assets/design/tokens.json'
 
 // System and generic families are never downloaded: only the first other family of the display and body stacks.
@@ -25,10 +26,17 @@ export default defineNuxtConfig({
     'nuxt-schema-org',
     'nuxt-og-image',
   ],
+  // The section kit (`app/components/kit/`) imports its own files: only `KbPage` is registered, so its `ui/`
+  // primitives never collide with the project's components.
+  components: [
+    { path: '~/components/kit', pattern: 'KbPage.vue', pathPrefix: false },
+    { path: '~/components', ignore: ['kit/**'] },
+  ],
   devtools: { enabled: false },
 
-  // The design's values (colours, fonts, sizes, spacing…), set once and used everywhere through `var(--…)`.
-  css: ['~/assets/design/tokens.css'],
+  // The design's values (colours, fonts, sizes, spacing…), set once and used everywhere through `var(--…)`,
+  // then Tailwind and the section kit, which read them.
+  css: ['~/assets/design/tokens.css', '~/assets/css/tailwind.css', '~/components/kit/kit.css'],
 
   runtimeConfig: {
     // Signs the share image addresses (`/_og/…`): at least 32 characters, stable, one per environment.
@@ -43,6 +51,9 @@ export default defineNuxtConfig({
       // Read by the search engine modules (robots.txt, sitemap, structured data) and by `app.vue`: the public
       // address, the language, and whether search engines may index the site. Only production is indexable.
       site: { url: '', indexable: false, defaultLocale: 'en' },
+      // Origin of Kanboto's page workshop, which frames the site to inspect its blocks. Kanboto sets it outside
+      // production only; empty, the site cannot be framed and the inspector stays off.
+      kanbotoInspectOrigin: '',
     },
   },
 
@@ -52,7 +63,6 @@ export default defineNuxtConfig({
     '/**': {
       headers: {
         'x-content-type-options': 'nosniff',
-        'x-frame-options': 'DENY',
         'referrer-policy': 'no-referrer',
       },
     },
@@ -64,6 +74,10 @@ export default defineNuxtConfig({
     preset: 'node-server',
     // `useEvent()` anywhere on the server: log lines written while a request is handled carry its request id.
     experimental: { asyncContext: true },
+  },
+
+  vite: {
+    plugins: [tailwindcss()],
   },
 
   eslint: {

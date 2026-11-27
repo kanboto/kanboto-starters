@@ -25,12 +25,24 @@ function logs(): Record<string, unknown>[] {
 }
 
 describe('home page', () => {
-  it('is rendered on the server, with the configured name', async () => {
+  it('is rendered on the server from its page document, block by block', async () => {
     const html = await $fetch<string>('/')
-    expect(html).toMatch(/<h1[^>]*>Acme Console<\/h1>/)
-    expect(html).toContain('Hello world')
-    expect(html).toContain('<title>Acme Console</title>')
+    expect(html).toMatch(/<h1[^>]*>\s*Keep every item on track\s*<\/h1>/)
+    expect(html).toContain('<title>Keep every item on track · Acme Console</title>')
     expect(html).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg">')
+    expect(html).toMatch(/<div class="kb-root @container" data-kb-page="home"/)
+    expect(html).toMatch(/<a href="\/app\/items"[^>]* data-kb-field="primary"/)
+    expect(html).toMatch(/<li data-kb-field="items" data-kb-item="0"/)
+    const blocks = [...html.matchAll(/data-kb-block="([^"]+)" data-kb-type="([^"]+)"/g)].map(([, id, type]) => [id, type])
+    expect(blocks).toEqual([
+      ['nav-1', 'nav'],
+      ['hero-1', 'hero'],
+      ['features-1', 'features'],
+      ['steps-1', 'steps'],
+      ['faq-1', 'faq'],
+      ['cta-1', 'cta'],
+      ['footer-1', 'footer'],
+    ])
   })
 
   it('has an icon drawn from the name, served as a route of its own', async () => {
@@ -50,6 +62,16 @@ describe('search engines, outside production', () => {
     const home = await fetch('/')
     expect(home.headers.get('x-robots-tag')).toBe('noindex, nofollow')
     expect(await home.text()).toContain('<meta name="robots" content="noindex, nofollow">')
+  })
+})
+
+describe('framing, without the page workshop\'s origin', () => {
+  it('cannot be shown in a frame, whatever the page', async () => {
+    for (const path of ['/', '/app/items', '/healthz']) {
+      const response = await fetch(path)
+      expect(response.headers.get('x-frame-options'), path).toBe('DENY')
+      expect(response.headers.get('content-security-policy'), path).toBeNull()
+    }
   })
 })
 

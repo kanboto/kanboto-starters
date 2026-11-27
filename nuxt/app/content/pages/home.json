@@ -1,0 +1,118 @@
+{
+  "slug": "home",
+  "path": "/",
+  "title": "Keep every item on track",
+  "description": "One shared list for what your team has to do, who owns it and where it stands. Set it up in minutes.",
+  "blocks": [
+    {
+      "id": "nav-1",
+      "type": "nav",
+      "variant": "simple",
+      "props": {
+        "brand": "My app",
+        "links": [
+          { "label": "Features", "href": "#features-1" },
+          { "label": "How it works", "href": "#steps-1" },
+          { "label": "Questions", "href": "#faq-1" }
+        ],
+        "cta": { "label": "Open the app", "href": "/app/items" }
+      }
+    },
+    {
+      "id": "hero-1",
+      "type": "hero",
+      "variant": "media-right",
+      "settings": { "tone": "default", "density": "normal", "width": "contained" },
+      "props": {
+        "eyebrow": "Shared work, in one place",
+        "title": "Keep every item on track",
+        "subtitle": "One shared list for what your team has to do, who owns it and where it stands. No status meeting needed to find out.",
+        "primary": { "label": "Get started", "href": "/app/items" },
+        "secondary": { "label": "See how it works", "href": "#steps-1" },
+        "image": {
+          "alt": "The list of items, each with its owner and its status",
+          "ratio": "4:3",
+          "width": 1200,
+          "height": 900,
+          "prompt": "A clean product screenshot: a list of work items with owner and status columns, on a light background"
+        }
+      }
+    },
+    {
+      "id": "features-1",
+      "type": "features",
+      "variant": "grid",
+      "settings": { "tone": "surface", "density": "normal", "width": "contained" },
+      "options": { "columns": "3" },
+      "props": {
+        "eyebrow": "Features",
+        "title": "Everything the team needs to follow the work",
+        "subtitle": "Nothing to configure before the first item is in.",
+        "items": [
+          { "icon": "list", "title": "One list, always current", "text": "Every item has an owner, a status and a date. What changes shows up for everyone at once." },
+          { "icon": "users", "title": "Made for the whole team", "text": "Invite colleagues with a link. Each of them sees what is theirs first." },
+          { "icon": "bell", "title": "Quiet by default", "text": "You are told when something of yours moves, and only then." },
+          { "icon": "search", "title": "Found in a second", "text": "Search by title, owner or status, and keep the filters you use every day." },
+          { "icon": "shield-check", "title": "Yours, and private", "text": "Your data stays in your workspace. Export it whenever you want." },
+          { "icon": "zap", "title": "Fast on every screen", "text": "The same list on a phone as on a desk, without an app to install." }
+        ]
+      }
+    },
+    {
+      "id": "steps-1",
+      "type": "steps",
+      "variant": "row",
+      "settings": { "tone": "default", "density": "normal", "width": "contained" },
+      "props": {
+        "title": "Up and running in three steps",
+        "subtitle": "From an empty list to a team that knows what comes next.",
+        "items": [
+          { "title": "Create your workspace", "text": "Name it, and you are in. No card, no setup call." },
+          { "title": "Add your first items", "text": "Type them in, or paste a list: one line becomes one item." },
+          { "title": "Invite the team", "text": "Share the link. Everyone picks up what is theirs." }
+        ]
+      }
+    },
+    {
+      "id": "faq-1",
+      "type": "faq",
+      "variant": "accordion",
+      "settings": { "tone": "surface", "density": "normal", "width": "contained" },
+      "props": {
+        "title": "Questions, answered",
+        "items": [
+          { "question": "How long does it take to get started?", "answer": "A few minutes. Create a workspace, add an item, and the list is ready to share." },
+          { "question": "Can I bring an existing list?", "answer": "Yes. Paste it in: each line becomes an item you can then assign and date." },
+          { "question": "Who can see my items?", "answer": "Only the people you invite to the workspace. Nothing is public." },
+          { "question": "Does it work on a phone?", "answer": "Yes. The site adapts to the screen, and nothing has to be installed." }
+        ]
+      }
+    },
+    {
+      "id": "cta-1",
+      "type": "cta",
+      "variant": "centered",
+      "settings": { "tone": "inverse", "density": "normal", "width": "contained" },
+      "props": {
+        "title": "Start with your first item",
+        "text": "It takes less time than writing the status update.",
+        "primary": { "label": "Get started", "href": "/app/items" }
+      }
+    },
+    {
+      "id": "footer-1",
+      "type": "footer",
+      "variant": "simple",
+      "props": {
+        "brand": "My app",
+        "text": "One shared list for the work of a team.",
+        "links": [
+          { "label": "Features", "href": "#features-1" },
+          { "label": "How it works", "href": "#steps-1" },
+          { "label": "Questions", "href": "#faq-1" }
+        ],
+        "legal": "© My app. All rights reserved."
+      }
+    }
+  ]
+}

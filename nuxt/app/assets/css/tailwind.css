@@ -1,0 +1,38 @@
+/* Tailwind and the section kit. The theme is shadcn's standard indirection: `bg-primary` reads `--primary`,
+   which the kit (`components/kit/kit.css`) sets from the design tokens under `.kb-root`. No value is written
+   here: `assets/design/tokens.css` stays the only place that holds one. */
+@import "tailwindcss";
+
+/* Fonts come from the tokens too: without this, Tailwind's own stacks would reach the page and the font
+   modules would try to fetch them. */
+@theme {
+  --font-mono: initial;
+  --default-font-family: var(--font-body);
+  --default-mono-font-family: var(--font-mono);
+}
+
+@theme inline reference {
+  --font-sans: var(--font-body);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}

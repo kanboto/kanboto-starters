@@ -70,6 +70,30 @@ Rules in priority order: when two conflict, the first one wins.
 - Every public page has a share image (`og:image`, 1200×630) drawn by `app/components/OgImage/` from its title
   and description; a page changes them with `defineOgImage()`. The template uses token values only.
 
+### Pages
+
+- A page is a document, `app/content/pages/<slug>.json`, rendered by `<KbPage :page>`; its route file only
+  loads it with `usePageContent()` and sets `useSeoMeta()` from its `title` and `description`.
+- When `.kanboto/pages/` holds a page validated in Kanboto, its document is copied as is: block order,
+  variants, settings, texts and images come from it. Change the document, never rebuild a section by hand in a
+  page.
+- Every section of `app/components/kit/` keeps `data-kb-block` and `data-kb-type` on its root, `data-kb-field`
+  on each element showing a field and `data-kb-item` on each list entry, in the server-rendered HTML: Kanboto
+  reads them back on the deployed page.
+- Every field is optional: a missing field renders no element. Exactly one `h1` per page, designated by
+  `KbPage`.
+- `app/components/kit/` imports only its own files (relative imports, explicit `vue` imports, no Nuxt
+  composable); its only tie to Nuxt is `NuxtLink` inside `KbLink`.
+- Kit styles use the semantic colour classes mapped to the design tokens, `rounded-(--radius-*)`,
+  `shadow-(--shadow-*)` and container variants (`@3xl:`); never a viewport variant, `dark:`, or a literal
+  colour or size.
+- A block the kit lacks is a `custom` block: implement it as a new section wrapped in `KbSection` and
+  registered in `KbPage`, never as markup in the page.
+- Application blocks (`list`, `table`, `detail`, `form`) get their real data by building the block's `props`
+  from `useApi()`, with loading, empty and error states; the document's items are examples.
+- Before writing or changing markup, styles or client-side behaviour, read the matching guide of the
+  `modern-web-guidance` skill when it is available.
+
 ### Commands
 
 - Install: `npm ci`
@@ -80,9 +104,36 @@ Rules in priority order: when two conflict, the first one wins.
 ## This starter
 
 - `app/` is the Vue application, rendered on the server: `app/pages/` holds the pages (file-based routing),
-  `app/app.vue` the root component, `app/composables/` the composables. `pages/index.vue` is an example page:
-  replace it with your domain's, keeping its conventions (plain CSS on the design tokens, no secret in the
-  page).
+  `app/app.vue` the root component, `app/composables/` the composables.
+- Pages are data. A page is a document of `app/content/pages/<slug>.json` (`slug`, `path`, `title`,
+  `description`, `blocks`), rendered block by block by `<KbPage :page>`; its route file only loads it
+  (`usePageContent('<slug>')`) and sets `useSeoMeta()` from its title and description. `pages/index.vue`
+  (`home.json`) and `pages/app/items.vue` (`app-items.json`) are the examples: replace their content, keep the
+  pattern. `kit-all.json` holds every block for the tests and is never routed.
+- To add a page: write `app/content/pages/<slug>.json`, add `app/pages/<path>.vue` on the model of
+  `pages/index.vue`, and wire the data of its application blocks (list, table, detail) by building the block's
+  `props` from `useApi()` instead of the document's examples. Layout, order and variants come from the
+  document: do not rebuild a section by hand in the page.
+- The section kit is `app/components/kit/`: one section per block type (`sections/Kb*.vue`), the shadcn-vue
+  primitives they use (`ui/`), `KbPage`, `KbLink`, `KbImage` and `kit.css`, which sets shadcn's variables from
+  the design tokens under `.kb-root`. Kanboto copies this folder as is into its page workshop: inside it, only
+  relative imports between its files, explicit `vue` imports, no Nuxt composable (`KbLink` resolves `NuxtLink`),
+  no value outside the tokens. Sections use shadcn's colour classes (`bg-background`, `text-muted-foreground`,
+  `bg-primary`…), `rounded-(--radius-*)`, `shadow-(--shadow-*)` and container variants (`@3xl:`), never
+  viewport ones (`md:`), never `dark:`.
+- A section keeps what the workshop reads: `data-kb-block` and `data-kb-type` on its root (through
+  `KbSection`), `data-kb-field` on each element that shows a field, `data-kb-item` on each entry of a list.
+  A missing field renders nothing; the title is `h1` only in the block `KbPage` designates (`useHeading()`).
+- A block the kit does not have is a `custom` block, shown by `KbCustom` with its description. To build it:
+  write its component in `app/components/kit/sections/` on the model of the others (wrapped in `KbSection`,
+  same markers), then register it under its type in the `SECTIONS` map of `KbPage.vue` and give the block that
+  type in the page document.
+- More shadcn-vue primitives: `npx shadcn-vue@latest add <name>` (`components.json` points to the kit's `ui/`),
+  then rewrite the generated imports as relative ones and drop `dark:` classes. Icons named in a page document
+  come from the allowlist of `kit/lib/icons.ts`.
+- Kanboto's page workshop frames the running site to point at blocks: `app/plugins/kanboto-inspect.client.ts`
+  and `server/plugins/frame.ts`, both off unless `NUXT_PUBLIC_KANBOTO_INSPECT_ORIGIN` is set (outside
+  production only); keep them.
 - The application's name comes from `NUXT_PUBLIC_APP_NAME` (`runtimeConfig.public.appName`), shown on the home
   page and as the page title. When scaffolding a project from this starter, set its default in
   `nuxt.config.ts` and its value in `.env.example` to the project's name.
@@ -94,7 +145,8 @@ Rules in priority order: when two conflict, the first one wins.
   (`NUXT_PUBLIC_SITE_*`). Each page sets its title and description with `useSeoMeta()`; `app/app.vue` adds the
   canonical address, the language and the Open Graph defaults, `server/plugins/site.ts` the site's name. When
   scaffolding, set `NUXT_PUBLIC_SITE_DEFAULT_LOCALE` to the language of the pages.
-- Design: `app/assets/design/tokens.css` (every style reads it) and `tokens.json` (read by `nuxt.config.ts` for
+- Design: `app/assets/design/tokens.css` (every style reads it; `app/assets/css/tailwind.css` maps Tailwind's
+  theme onto shadcn's variables and holds no value) and `tokens.json` (read by `nuxt.config.ts` for
   the fonts, by the share image template and by the tab icon). The share image is
   `app/components/OgImage/Page.takumi.vue`, declared once in `app/app.vue` (`defineOgImage('Page')`); Takumi
   lays it out like flexbox, with inline styles. Its addresses are signed with `NUXT_APP_SECRET`

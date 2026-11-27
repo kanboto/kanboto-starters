@@ -3,8 +3,9 @@
 A minimal, production-ready web frontend built with Nuxt, rendered on the server (SSR). It ships with everything
 a production frontend needs and nothing it does not: runtime configuration, probes, Prometheus metrics,
 graceful shutdown, JSON logs, a hardened image, what search engines need (robots.txt, sitemap,
-structured data, canonical addresses), design tokens and a share image for every page. Its one page shows the
-application's name and "Hello world".
+structured data, canonical addresses), design tokens, a share image for every page, and a kit of page sections
+(Tailwind 4, shadcn-vue) that renders pages written as data. Its example pages are a home page and a screen of
+the signed-in area.
 
 ## Requirements
 
@@ -36,7 +37,8 @@ PORT=8080 npm start                # serve on http://localhost:8080
 | Build | `npm run build` |
 
 Tests build the application and run the production server on `127.0.0.1`, as the image does: they check the
-server-side rendered page, the probes, the metrics, the logs and the graceful shutdown. Only the build uses the
+server-side rendered page, the probes, the metrics, the logs and the graceful shutdown. `tests/kit.test.ts`
+renders every block of the section kit on its own (one section per block, one heading, complete images). Only the build uses the
 network, to fetch the design's fonts. `tests/seo.test.ts` runs it as in production and checks every page of
 the sitemap: title, description, canonical address, one heading, structured data, share image.
 
@@ -58,6 +60,7 @@ environment.
 | `NUXT_PUBLIC_SITE_URL` | `http://localhost:8080` | Public address of the site: canonical addresses, sitemap, structured data |
 | `NUXT_PUBLIC_SITE_INDEXABLE` | `false` | `true` lets search engines index the site; set in production only |
 | `NUXT_PUBLIC_SITE_DEFAULT_LOCALE` | `en` | Language of the pages (`<html lang>`, `og:locale`) |
+| `NUXT_PUBLIC_KANBOTO_INSPECT_ORIGIN` | empty | Origin of Kanboto's page workshop, the only one allowed to frame the site and inspect its blocks. Kanboto sets it outside production only; empty, the site cannot be framed |
 | `NUXT_APP_SECRET` | a development value | Signs the share image addresses: at least 32 characters, stable, one per environment. Without it, share images answer `500` |
 
 The application's settings are Nuxt's [runtime config](https://nuxt.com/docs/guide/going-further/runtime-config):
@@ -100,6 +103,47 @@ neutral and are replaced by the project's visual direction.
   text with `defineOgImage('Page', { title, description })`.
 - The tab icon (`/favicon.svg`) is the name's initial in the action colours.
 
+## Pages and sections
+
+A page is a document, `app/content/pages/<slug>.json`: a title, a description and a list of blocks. Each block
+has a type (`hero`, `features`, `faq`, `list`…), a variant, settings (`tone`, `density`, `width`), options
+(`columns`) and its fields in `props`. `<KbPage :page>` renders it block by block with the section kit of
+`app/components/kit/`:
+
+```vue
+<script setup lang="ts">
+const page = usePageContent('home')
+useSeoMeta({ title: page.title, description: page.description, ogTitle: page.title, ogDescription: page.description })
+</script>
+
+<template>
+  <KbPage :page="page" />
+</template>
+```
+
+- **Add a page**: write its document, then its route file in `app/pages/` as above. A screen of the signed-in
+  area goes under `app/pages/app/`.
+- **Sections**: one component per block type in `kit/sections/`. Every field is optional (a missing one renders
+  nothing), an unknown variant falls back to the first one, an unknown type to `KbCustom`. A page has exactly
+  one `h1`: the title of its hero or page header, else its first title.
+- **Add a block**: a `custom` block holds the place, with its description. Write its component in
+  `kit/sections/` on the model of the others, register it under its type in the `SECTIONS` map of
+  `kit/KbPage.vue`, and use that type in the page document.
+- **Style**: `kit/kit.css` sets shadcn's variables (`--background`, `--primary`, `--border`…) from the design
+  tokens, under `.kb-root`; `app/assets/css/tailwind.css` maps Tailwind's theme onto them. Sections adapt to the
+  width of the page container (`@3xl:`), not of the viewport. Add a shadcn-vue primitive with
+  `npx shadcn-vue@latest add <name>`, then make its imports relative: the kit folder imports nothing outside
+  itself, so that Kanboto's page workshop can render the same components.
+- **Markup**: native elements first (`details` for questions, a `popover` for the collapsed navigation, native
+  form validation, a table that scrolls inside a focusable region), images with `alt`, `width` and `height`,
+  visible keyboard focus, 44px targets under a finger.
+
+Every section carries `data-kb-block` and `data-kb-type`, every field `data-kb-field`. When
+`NUXT_PUBLIC_KANBOTO_INSPECT_ORIGIN` is set, Kanboto's page workshop may show the site in a frame
+(`Content-Security-Policy: frame-ancestors <origin>`) and `app/plugins/kanboto-inspect.client.ts` tells it,
+through `postMessage` to that origin only, which block is under the pointer. Unset, every response carries
+`X-Frame-Options: DENY` and the plugin does nothing.
+
 ## Graceful shutdown
 
 The server is Nitro's `node-server`. On its shutdown signal, Nitro stops accepting connections, closes idle
@@ -124,7 +168,8 @@ which bundles the few dependencies it uses. The image runs on a read-only filesy
 
 | Path | Purpose |
 |---|---|
-| `/` | Home page, rendered on the server |
+| `/` | Home page, rendered on the server from `app/content/pages/home.json` |
+| `/app/items` | Example screen of the signed-in area, rendered in the browser |
 | `/robots.txt`, `/sitemap.xml` | For search engines, built at runtime from the site's address |
 | `/_og/…` | Share images, drawn on demand from signed addresses |
 | `/healthz` | Liveness: the server responds |
@@ -143,23 +188,29 @@ a query string or a request body.
 app/
 ├── app.vue                     Root component: title, canonical address, language, share image, base styles
 ├── assets/design/              Design tokens: tokens.css (used by every style), tokens.json (fonts, share image)
+├── assets/css/tailwind.css     Tailwind, its theme mapped onto shadcn's variables
+├── components/kit/             Section kit: KbPage, sections/ (one per block type), ui/ (shadcn-vue), kit.css
 ├── components/OgImage/         Template of the share image
-├── pages/index.vue             Home page (an example: replace it with your own)
+├── content/pages/              Pages as data: home.json, app-items.json (examples), kit-all.json (tests only)
+├── pages/                      Routes: index.vue and app/items.vue render their page document
+├── composables/usePageContent.ts   Loads a page document by slug
 ├── composables/useApi.ts       Client for the backend API, configured at runtime
+├── plugins/kanboto-inspect.client.ts   Inspector for Kanboto's page workshop, off unless configured
 └── plugins/route-pattern.server.ts   Hands the matched page's pattern to the server, for logs and metrics
 server/
 ├── routes/                     healthz, readyz and metrics endpoints
 ├── plugins/observability.ts    Request id, request log and metrics, error log, JSON console
 ├── plugins/shutdown.ts         Drain phase and Nitro's graceful shutdown
 ├── plugins/site.ts             The application's name as the site's name, for search engines
+├── plugins/frame.ts            Who may frame the site: nobody, or Kanboto's page workshop when configured
 └── lib/                        Settings, JSON logging, Prometheus metrics, process state
 shared/types/                   Types shared by the app and the server
 nuxt.config.ts                  Nuxt configuration and runtime config defaults
 tests/
 ```
 
-Replace the home page with your own, keeping its conventions. The `server/` modules and the route-pattern
-plugin implement the runtime contracts and are meant to stay.
+Replace the content of the example pages with your own, keeping the pattern. The `server/` modules and the
+plugins implement the runtime contracts and are meant to stay.
 
 `package.json` overrides `simple-git`, a dependency of Nuxt DevTools (turned off here), with a release that fixes
 a known vulnerability; drop the override once Nuxt depends on a fixed release.

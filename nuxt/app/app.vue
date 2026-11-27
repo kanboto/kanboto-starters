@@ -21,8 +21,11 @@ useSeoMeta({
   ogLocale: site.defaultLocale,
   twitterCard: 'summary_large_image',
 })
-// The share image: the page's title and description, drawn in the design's colours and fonts.
-defineOgImage('Page')
+// The share image: the page's title and description, drawn in the design's colours and fonts. Declared on the
+// server only: crawlers read it there, and the signed-in area (rendered in the browser) has none.
+if (import.meta.server) {
+  defineOgImage('Page')
+}
 </script>
 
 <template>

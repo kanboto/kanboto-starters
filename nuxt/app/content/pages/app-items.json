@@ -1,0 +1,59 @@
+{
+  "slug": "app-items",
+  "path": "/app/items",
+  "title": "Items",
+  "description": "The items of the workspace, with their owner and their status.",
+  "blocks": [
+    {
+      "id": "app-nav-1",
+      "type": "app-nav",
+      "variant": "sidebar",
+      "props": {
+        "brand": "My app",
+        "links": [
+          { "icon": "list", "label": "Items", "href": "/app/items" },
+          { "icon": "house", "label": "Website", "href": "/" }
+        ]
+      }
+    },
+    {
+      "id": "page-header-1",
+      "type": "page-header",
+      "variant": "simple",
+      "settings": { "tone": "default", "density": "compact", "width": "contained" },
+      "props": {
+        "title": "Items",
+        "text": "Everything the team is working on, most recent first.",
+        "primary": { "label": "New item", "href": "/app/items#new" },
+        "secondary": { "label": "Export", "href": "/app/items#export" }
+      }
+    },
+    {
+      "id": "list-1",
+      "type": "list",
+      "variant": "rows",
+      "settings": { "tone": "default", "density": "compact", "width": "contained" },
+      "props": {
+        "title": "In progress",
+        "items": [
+          { "title": "Prepare the quarterly review", "text": "Collect the figures and draft the summary.", "meta": "Due Friday", "status": "In progress" },
+          { "title": "Renew the supplier contract", "text": "Waiting for the signed copy.", "meta": "Due next week", "status": "Waiting" },
+          { "title": "Welcome the new teammate", "text": "Accounts, equipment and a first-week plan.", "meta": "Due Monday", "status": "To do" }
+        ],
+        "empty_title": "Nothing in progress",
+        "empty_text": "Items you start working on show up here."
+      }
+    },
+    {
+      "id": "empty-state-1",
+      "type": "empty-state",
+      "variant": "card",
+      "settings": { "tone": "default", "density": "compact", "width": "contained" },
+      "props": {
+        "title": "No archived item yet",
+        "text": "Items you close are kept here, so nothing is lost.",
+        "primary": { "label": "New item", "href": "/app/items#new" }
+      }
+    }
+  ]
+}
