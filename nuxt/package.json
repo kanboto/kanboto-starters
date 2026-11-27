@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@nuxt/fonts": "^1.2.0",
+    "@nuxt/image": "^2.2.1",
     "@nuxtjs/robots": "^7.1.0",
     "@nuxtjs/sitemap": "^9.2.0",
     "@tailwindcss/vite": "^4.3.5",

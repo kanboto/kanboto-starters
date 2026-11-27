@@ -4,18 +4,7 @@
   "title": "Items",
   "description": "The items of the workspace, with their owner and their status.",
   "blocks": [
-    {
-      "id": "app-nav-1",
-      "type": "app-nav",
-      "variant": "sidebar",
-      "props": {
-        "brand": "My app",
-        "links": [
-          { "icon": "list", "label": "Items", "href": "/app/items" },
-          { "icon": "house", "label": "Website", "href": "/" }
-        ]
-      }
-    },
+    { "ref": "app-nav" },
     {
       "id": "page-header-1",
       "type": "page-header",
@@ -24,8 +13,8 @@
       "props": {
         "title": "Items",
         "text": "Everything the team is working on, most recent first.",
-        "primary": { "label": "New item", "href": "/app/items#new" },
-        "secondary": { "label": "Export", "href": "/app/items#export" }
+        "primary": { "label": "New item", "href": "/app/items#new", "icon": "plus" },
+        "secondary": { "label": "Export", "href": "/app/items#export", "icon": "download" }
       }
     },
     {
@@ -52,7 +41,7 @@
       "props": {
         "title": "No archived item yet",
         "text": "Items you close are kept here, so nothing is lost.",
-        "primary": { "label": "New item", "href": "/app/items#new" }
+        "primary": { "label": "New item", "href": "/app/items#new", "icon": "plus" }
       }
     }
   ]

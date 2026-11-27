@@ -1,0 +1,195 @@
+/* Block library: shadcn's base variables, set from the design tokens and scoped to `.kb-root` (the root of
+   `KbPage`), so the same folder renders with any project's tokens wherever it is dropped. The tokens
+   (`--color-*`, `--font-*`, `--radius-*`, `--space-*`…) are read, never redefined. */
+@layer base {
+  .kb-root {
+    --background: var(--color-bg);
+    --foreground: var(--color-text);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text);
+    --popover: var(--color-bg);
+    --popover-foreground: var(--color-text);
+    --primary: var(--color-action);
+    --primary-foreground: var(--color-action-text);
+    --secondary: var(--color-surface);
+    --secondary-foreground: var(--color-text);
+    --muted: var(--color-surface);
+    --muted-foreground: var(--color-muted);
+    --accent: var(--color-surface);
+    --accent-foreground: var(--color-text);
+    --destructive: var(--color-danger);
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-focus);
+    /* `rounded-md` is `calc(var(--radius) - 2px)`: it lands on the token. The library's own classes read the
+       tokens directly (`rounded-(--radius-lg)`). */
+    --radius: calc(var(--radius-md) + 2px);
+    --spacing: var(--space-1);
+    /* The second colour of the charter, when it has one; its action colour otherwise. Not `--color-accent`:
+       that name belongs to Tailwind's theme. */
+    --kb-accent: var(--color-highlight, var(--color-action));
+    --kb-accent-text: var(--color-highlight-text, var(--color-action-text));
+    --font-sans: var(--font-body);
+
+    color: var(--foreground);
+    background-color: var(--background);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+  }
+
+  .kb-root,
+  .kb-root :where(*, ::before, ::after, ::backdrop) {
+    border-color: var(--border);
+  }
+
+  /* The logo keeps its proportions at the height of the bar. */
+  .kb-root .kb-logo > svg {
+    display: block;
+    width: auto;
+    height: 100%;
+  }
+
+  .kb-root :where(h1, h2, h3) {
+    font-family: var(--font-display);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* A sticky navigation bar must not cover what the keyboard or an in-page link brings into view. */
+  .kb-root :where(:target, :focus-visible) {
+    scroll-margin-top: calc(var(--spacing) * 18);
+  }
+
+  /* Without the Popover API the navigation cannot open as a drawer: the links stay in the page, always. */
+  @supports not selector(:popover-open) {
+    .kb-root .kb-nav-panel {
+      position: static;
+      display: flex;
+      width: auto;
+      max-width: none;
+      height: auto;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      translate: none;
+    }
+
+    .kb-root .kb-nav-toggle {
+      display: none;
+    }
+  }
+
+  .kb-root :where(p, li, dd, blockquote, figcaption) {
+    text-wrap: pretty;
+    overflow-wrap: break-word;
+  }
+
+  /* `settings.tone`: a section re-declares the base variables, every class inside follows. */
+  .kb-root .kb-tone-surface {
+    --background: var(--color-surface);
+    --card: var(--color-bg);
+    --muted: var(--color-bg);
+    --secondary: var(--color-bg);
+    --accent: var(--color-bg);
+  }
+
+  .kb-root .kb-tone-accent {
+    --background: var(--kb-accent);
+    --foreground: var(--kb-accent-text);
+    --card: color-mix(in oklab, var(--kb-accent-text) 8%, var(--kb-accent));
+    --card-foreground: var(--kb-accent-text);
+    --primary: var(--kb-accent-text);
+    --primary-foreground: var(--kb-accent);
+    --secondary: var(--card);
+    --secondary-foreground: var(--kb-accent-text);
+    --muted: var(--card);
+    --muted-foreground: color-mix(in oklab, var(--kb-accent-text) 76%, var(--kb-accent));
+    --accent: var(--card);
+    --accent-foreground: var(--kb-accent-text);
+    --border: color-mix(in oklab, var(--kb-accent-text) 24%, var(--kb-accent));
+    --input: var(--border);
+    --ring: var(--kb-accent-text);
+  }
+
+  .kb-root .kb-tone-inverse {
+    --background: var(--color-action);
+    --foreground: var(--color-action-text);
+    --card: color-mix(in oklab, var(--color-action-text) 8%, var(--color-action));
+    --card-foreground: var(--color-action-text);
+    --primary: var(--color-action-text);
+    --primary-foreground: var(--color-action);
+    --secondary: var(--card);
+    --secondary-foreground: var(--color-action-text);
+    --muted: var(--card);
+    --muted-foreground: color-mix(in oklab, var(--color-action-text) 72%, var(--color-action));
+    --accent: var(--card);
+    --accent-foreground: var(--color-action-text);
+    --border: color-mix(in oklab, var(--color-action-text) 24%, var(--color-action));
+    --input: var(--border);
+    --ring: var(--color-action-text);
+  }
+
+  /* A word of a title set apart, as with a highlighter: the accent colour lies under the lower part of the
+     letters and the text keeps its own colour, so it reads whatever the accent is (a pale one included).
+     Where the ground is already a colour, it is underlined instead. */
+  .kb-root .kb-mark {
+    font-style: normal;
+    background-image: linear-gradient(transparent 58%, color-mix(in oklab, var(--kb-accent) 32%, transparent) 58%);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .kb-root :where(.kb-tone-accent, .kb-tone-inverse) .kb-mark {
+    background-image: none;
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.14em;
+  }
+
+  /* `settings.backdrop`: a decoration behind the content, drawn from the colours of the charter. It never
+     carries meaning and never sits between the text and its ground: the ground stays the tone's colour. */
+  .kb-root .kb-backdrop {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+  }
+
+  .kb-root .kb-backdrop::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+  }
+
+  .kb-root .kb-backdrop-glow::before {
+    background:
+      radial-gradient(42% 58% at 12% 8%, color-mix(in oklab, var(--kb-accent) 30%, transparent), transparent 72%),
+      radial-gradient(36% 52% at 92% 88%, color-mix(in oklab, var(--color-action) 18%, transparent), transparent 72%);
+    filter: blur(var(--space-12));
+  }
+
+  .kb-root .kb-backdrop-grid::before {
+    background-image:
+      linear-gradient(var(--border) var(--border-width), transparent var(--border-width)),
+      linear-gradient(90deg, var(--border) var(--border-width), transparent var(--border-width));
+    background-size: var(--space-12) var(--space-12);
+    mask-image: radial-gradient(ellipse at center, black 25%, transparent 78%);
+  }
+
+  .kb-root .kb-backdrop-dots::before {
+    background-image: radial-gradient(var(--border) calc(var(--border-width) * 1.5), transparent calc(var(--border-width) * 1.5));
+    background-size: var(--space-6) var(--space-6);
+    mask-image: linear-gradient(to bottom, black, transparent 88%);
+  }
+
+  /* The decoration is decoration: gone where the reader asked for more contrast or forced colours. */
+  @media (prefers-contrast: more), (forced-colors: active) {
+    .kb-root .kb-backdrop::before {
+      display: none;
+    }
+  }
+}

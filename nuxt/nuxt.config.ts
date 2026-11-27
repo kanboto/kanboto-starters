@@ -21,22 +21,23 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/fonts',
+    '@nuxt/image',
     '@nuxtjs/robots',
     '@nuxtjs/sitemap',
     'nuxt-schema-org',
     'nuxt-og-image',
   ],
-  // The section kit (`app/components/kit/`) imports its own files: only `KbPage` is registered, so its `ui/`
+  // The block library (`app/components/blocks/`) imports its own files: only `KbPage` is registered, so its `ui/`
   // primitives never collide with the project's components.
   components: [
-    { path: '~/components/kit', pattern: 'KbPage.vue', pathPrefix: false },
-    { path: '~/components', ignore: ['kit/**'] },
+    { path: '~/components/blocks', pattern: 'KbPage.vue', pathPrefix: false },
+    { path: '~/components', ignore: ['blocks/**'] },
   ],
   devtools: { enabled: false },
 
   // The design's values (colours, fonts, sizes, spacing…), set once and used everywhere through `var(--…)`,
-  // then Tailwind and the section kit, which read them.
-  css: ['~/assets/design/tokens.css', '~/assets/css/tailwind.css', '~/components/kit/kit.css'],
+  // then Tailwind and the block library, which read them.
+  css: ['~/assets/design/tokens.css', '~/assets/css/tailwind.css', '~/components/blocks/blocks.css'],
 
   runtimeConfig: {
     // Signs the share image addresses (`/_og/…`): at least 32 characters, stable, one per environment.
@@ -90,6 +91,9 @@ export default defineNuxtConfig({
     provider: 'google',
     defaults: { subsets: ['latin', 'latin-ext'] },
   },
+  // Images of the site are kept in the repository at their original definition; the server hands each visitor
+  // a WebP at the width of their screen (`NuxtImg`, used by the image of the block library).
+  image: { format: ['webp'], quality: 80 },
 
   // The share image of every page (`app/components/OgImage/`), drawn by Takumi without a browser.
   ogImage: {

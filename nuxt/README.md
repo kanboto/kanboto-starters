@@ -3,7 +3,7 @@
 A minimal, production-ready web frontend built with Nuxt, rendered on the server (SSR). It ships with everything
 a production frontend needs and nothing it does not: runtime configuration, probes, Prometheus metrics,
 graceful shutdown, JSON logs, a hardened image, what search engines need (robots.txt, sitemap,
-structured data, canonical addresses), design tokens, a share image for every page, and a kit of page sections
+structured data, canonical addresses), design tokens, a share image for every page, and a library of page sections
 (Tailwind 4, shadcn-vue) that renders pages written as data. Its example pages are a home page and a screen of
 the signed-in area.
 
@@ -37,8 +37,8 @@ PORT=8080 npm start                # serve on http://localhost:8080
 | Build | `npm run build` |
 
 Tests build the application and run the production server on `127.0.0.1`, as the image does: they check the
-server-side rendered page, the probes, the metrics, the logs and the graceful shutdown. `tests/kit.test.ts`
-renders every block of the section kit on its own (one section per block, one heading, complete images). Only the build uses the
+server-side rendered page, the probes, the metrics, the logs and the graceful shutdown. `tests/blocks.test.ts`
+renders every block of the block library on its own (one section per block, one heading, complete images). Only the build uses the
 network, to fetch the design's fonts. `tests/seo.test.ts` runs it as in production and checks every page of
 the sitemap: title, description, canonical address, one heading, structured data, share image.
 
@@ -107,8 +107,12 @@ neutral and are replaced by the project's visual direction.
 
 A page is a document, `app/content/pages/<slug>.json`: a title, a description and a list of blocks. Each block
 has a type (`hero`, `features`, `faq`, `list`…), a variant, settings (`tone`, `density`, `width`), options
-(`columns`) and its fields in `props`. `<KbPage :page>` renders it block by block with the section kit of
-`app/components/kit/`:
+(`columns`) and its fields in `props`. `<KbPage :page>` renders it block by block with the block library of
+`app/components/blocks/`:
+
+A block several pages show (the navigation, the footer, a shared call to action) is written once, in
+`app/content/shared.json`, under its id. A page holds `{ "ref": "<id>" }` at its place and `usePageContent()`
+puts the shared block there: change it in the shared file and every page follows.
 
 ```vue
 <script setup lang="ts">
@@ -123,16 +127,16 @@ useSeoMeta({ title: page.title, description: page.description, ogTitle: page.tit
 
 - **Add a page**: write its document, then its route file in `app/pages/` as above. A screen of the signed-in
   area goes under `app/pages/app/`.
-- **Sections**: one component per block type in `kit/sections/`. Every field is optional (a missing one renders
+- **Sections**: one component per block type in `blocks/sections/`. Every field is optional (a missing one renders
   nothing), an unknown variant falls back to the first one, an unknown type to `KbCustom`. A page has exactly
   one `h1`: the title of its hero or page header, else its first title.
 - **Add a block**: a `custom` block holds the place, with its description. Write its component in
-  `kit/sections/` on the model of the others, register it under its type in the `SECTIONS` map of
-  `kit/KbPage.vue`, and use that type in the page document.
-- **Style**: `kit/kit.css` sets shadcn's variables (`--background`, `--primary`, `--border`…) from the design
+  `blocks/sections/` on the model of the others, register it under its type in the `SECTIONS` map of
+  `blocks/KbPage.vue`, and use that type in the page document.
+- **Style**: `blocks/blocks.css` sets shadcn's variables (`--background`, `--primary`, `--border`…) from the design
   tokens, under `.kb-root`; `app/assets/css/tailwind.css` maps Tailwind's theme onto them. Sections adapt to the
   width of the page container (`@3xl:`), not of the viewport. Add a shadcn-vue primitive with
-  `npx shadcn-vue@latest add <name>`, then make its imports relative: the kit folder imports nothing outside
+  `npx shadcn-vue@latest add <name>`, then make its imports relative: the block library folder imports nothing outside
   itself, so that Kanboto's page workshop can render the same components.
 - **Markup**: native elements first (`details` for questions, a `popover` for the collapsed navigation, native
   form validation, a table that scrolls inside a focusable region), images with `alt`, `width` and `height`,
@@ -189,11 +193,12 @@ app/
 ├── app.vue                     Root component: title, canonical address, language, share image, base styles
 ├── assets/design/              Design tokens: tokens.css (used by every style), tokens.json (fonts, share image)
 ├── assets/css/tailwind.css     Tailwind, its theme mapped onto shadcn's variables
-├── components/kit/             Section kit: KbPage, sections/ (one per block type), ui/ (shadcn-vue), kit.css
+├── components/blocks/             Block library: KbPage, sections/ (one per block type), ui/ (shadcn-vue), blocks.css
 ├── components/OgImage/         Template of the share image
-├── content/pages/              Pages as data: home.json, app-items.json (examples), kit-all.json (tests only)
+├── content/pages/              Pages as data: home.json, app-items.json (examples), all-blocks.json (tests only)
 ├── pages/                      Routes: index.vue and app/items.vue render their page document
-├── composables/usePageContent.ts   Loads a page document by slug
+├── content/shared.json         Blocks several pages show, written once (navigation, footer…)
+├── composables/usePageContent.ts   Loads a page document by slug, shared blocks in place
 ├── composables/useApi.ts       Client for the backend API, configured at runtime
 ├── plugins/kanboto-inspect.client.ts   Inspector for Kanboto's page workshop, off unless configured
 └── plugins/route-pattern.server.ts   Hands the matched page's pattern to the server, for logs and metrics

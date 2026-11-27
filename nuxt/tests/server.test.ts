@@ -35,13 +35,13 @@ describe('home page', () => {
     expect(html).toMatch(/<li data-kb-field="items" data-kb-item="0"/)
     const blocks = [...html.matchAll(/data-kb-block="([^"]+)" data-kb-type="([^"]+)"/g)].map(([, id, type]) => [id, type])
     expect(blocks).toEqual([
-      ['nav-1', 'nav'],
+      ['nav', 'nav'],
       ['hero-1', 'hero'],
       ['features-1', 'features'],
       ['steps-1', 'steps'],
       ['faq-1', 'faq'],
       ['cta-1', 'cta'],
-      ['footer-1', 'footer'],
+      ['footer', 'footer'],
     ])
   })
 

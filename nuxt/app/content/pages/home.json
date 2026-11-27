@@ -4,20 +4,7 @@
   "title": "Keep every item on track",
   "description": "One shared list for what your team has to do, who owns it and where it stands. Set it up in minutes.",
   "blocks": [
-    {
-      "id": "nav-1",
-      "type": "nav",
-      "variant": "simple",
-      "props": {
-        "brand": "My app",
-        "links": [
-          { "label": "Features", "href": "#features-1" },
-          { "label": "How it works", "href": "#steps-1" },
-          { "label": "Questions", "href": "#faq-1" }
-        ],
-        "cta": { "label": "Open the app", "href": "/app/items" }
-      }
-    },
+    { "ref": "nav" },
     {
       "id": "hero-1",
       "type": "hero",
@@ -99,20 +86,6 @@
         "primary": { "label": "Get started", "href": "/app/items" }
       }
     },
-    {
-      "id": "footer-1",
-      "type": "footer",
-      "variant": "simple",
-      "props": {
-        "brand": "My app",
-        "text": "One shared list for the work of a team.",
-        "links": [
-          { "label": "Features", "href": "#features-1" },
-          { "label": "How it works", "href": "#steps-1" },
-          { "label": "Questions", "href": "#faq-1" }
-        ],
-        "legal": "© My app. All rights reserved."
-      }
-    }
+    { "ref": "footer" }
   ]
 }

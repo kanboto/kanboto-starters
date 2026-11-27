@@ -1,5 +1,9 @@
 <script setup lang="ts">
 const { appName } = useRuntimeConfig().public
+// The site's logo, when the project has one (`app/assets/brand/logo.svg`): the navigation of the block library
+// draws it inline. Without the file, the navigation writes the name.
+const logos = import.meta.glob<string>('./assets/brand/logo.svg', { query: '?raw', import: 'default', eager: true })
+provide('kb:logo', Object.values(logos)[0] ?? '')
 const site = useSiteConfig()
 const route = useRoute()
 // The page's address on the site, without its query string.
@@ -40,8 +44,12 @@ body {
   color: var(--color-text);
   background: var(--color-bg);
   font-family: var(--font-body);
-  font-size: var(--text-base);
   line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Never on `html`: the root keeps the reader's own text size, which every `rem` follows. */
+body {
+  font-size: var(--text-base);
 }
 </style>

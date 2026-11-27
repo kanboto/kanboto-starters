@@ -11,10 +11,10 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "~/components/kit",
-    "utils": "~/components/kit/lib/utils",
-    "ui": "~/components/kit/ui",
-    "lib": "~/components/kit/lib",
+    "components": "~/components/blocks",
+    "utils": "~/components/blocks/lib/utils",
+    "ui": "~/components/blocks/ui",
+    "lib": "~/components/blocks/lib",
     "composables": "~/composables"
   }
 }

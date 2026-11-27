@@ -1,5 +1,5 @@
-/* Tailwind and the section kit. The theme is shadcn's standard indirection: `bg-primary` reads `--primary`,
-   which the kit (`components/kit/kit.css`) sets from the design tokens under `.kb-root`. No value is written
+/* Tailwind and the block library. The theme is shadcn's standard indirection: `bg-primary` reads `--primary`,
+   which the block library (`components/blocks/blocks.css`) sets from the design tokens under `.kb-root`. No value is written
    here: `assets/design/tokens.css` stays the only place that holds one. */
 @import "tailwindcss";
 

@@ -1,0 +1,45 @@
+{
+  "blocks": {
+    "nav": {
+      "id": "nav",
+      "type": "nav",
+      "variant": "simple",
+      "props": {
+        "brand": "My app",
+        "links": [
+          { "label": "Features", "href": "#features-1" },
+          { "label": "How it works", "href": "#steps-1" },
+          { "label": "Questions", "href": "#faq-1" }
+        ],
+        "cta": { "label": "Open the app", "href": "/app/items", "icon": "arrow-right" }
+      }
+    },
+    "footer": {
+      "id": "footer",
+      "type": "footer",
+      "variant": "simple",
+      "props": {
+        "brand": "My app",
+        "text": "One shared list for the work of a team.",
+        "links": [
+          { "label": "Features", "href": "#features-1" },
+          { "label": "How it works", "href": "#steps-1" },
+          { "label": "Questions", "href": "#faq-1" }
+        ],
+        "legal": "© My app. All rights reserved."
+      }
+    },
+    "app-nav": {
+      "id": "app-nav",
+      "type": "app-nav",
+      "variant": "sidebar",
+      "props": {
+        "brand": "My app",
+        "links": [
+          { "icon": "list", "label": "Items", "href": "/app/items" },
+          { "icon": "house", "label": "Website", "href": "/" }
+        ]
+      }
+    }
+  }
+}

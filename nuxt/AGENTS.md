@@ -74,25 +74,32 @@ Rules in priority order: when two conflict, the first one wins.
 
 - A page is a document, `app/content/pages/<slug>.json`, rendered by `<KbPage :page>`; its route file only
   loads it with `usePageContent()` and sets `useSeoMeta()` from its `title` and `description`.
+- A block shown on several pages (navigation, footer, a shared call to action) is written once in
+  `app/content/shared.json`; a page holds only `{"ref": "<id>"}` at its place and `usePageContent()` resolves
+  it. Change the shared file, never copy a shared block into a page.
 - When `.kanboto/pages/` holds a page validated in Kanboto, its document is copied as is: block order,
   variants, settings, texts and images come from it. Change the document, never rebuild a section by hand in a
   page.
-- Every section of `app/components/kit/` keeps `data-kb-block` and `data-kb-type` on its root, `data-kb-field`
-  on each element showing a field and `data-kb-item` on each list entry, in the server-rendered HTML: Kanboto
-  reads them back on the deployed page.
+- Every section of `app/components/blocks/` keeps `data-kb-block` and `data-kb-type` on its root,
+  `data-kb-field` on each element showing a field and `data-kb-item` on each list entry, in the
+  server-rendered HTML: Kanboto reads them back on the deployed page.
+- An image of a page is committed as received, at its original definition, under `public/`; the image block
+  serves it as WebP at the width of each screen (`NuxtImg`). Never convert, resize or compress an image by
+  hand, and never replace the image block with a plain `img`.
+- The site's logo is `app/assets/brand/logo.svg`, copied as received from `.kanboto/design/`; the navigation
+  shows it by itself (`kb:logo`, provided in `app.vue`). Never redraw it, inline it in a component or replace
+  it with an image.
 - Every field is optional: a missing field renders no element. Exactly one `h1` per page, designated by
   `KbPage`.
-- `app/components/kit/` imports only its own files (relative imports, explicit `vue` imports, no Nuxt
+- `app/components/blocks/` imports only its own files (relative imports, explicit `vue` imports, no Nuxt
   composable); its only tie to Nuxt is `NuxtLink` inside `KbLink`.
-- Kit styles use the semantic colour classes mapped to the design tokens, `rounded-(--radius-*)`,
+- Block styles use the semantic colour classes mapped to the design tokens, `rounded-(--radius-*)`,
   `shadow-(--shadow-*)` and container variants (`@3xl:`); never a viewport variant, `dark:`, or a literal
   colour or size.
-- A block the kit lacks is a `custom` block: implement it as a new section wrapped in `KbSection` and
+- A block the library lacks is a `custom` block: implement it as a new section wrapped in `KbSection` and
   registered in `KbPage`, never as markup in the page.
 - Application blocks (`list`, `table`, `detail`, `form`) get their real data by building the block's `props`
   from `useApi()`, with loading, empty and error states; the document's items are examples.
-- Before writing or changing markup, styles or client-side behaviour, read the matching guide of the
-  `modern-web-guidance` skill when it is available.
 
 ### Commands
 
@@ -109,13 +116,15 @@ Rules in priority order: when two conflict, the first one wins.
   `description`, `blocks`), rendered block by block by `<KbPage :page>`; its route file only loads it
   (`usePageContent('<slug>')`) and sets `useSeoMeta()` from its title and description. `pages/index.vue`
   (`home.json`) and `pages/app/items.vue` (`app-items.json`) are the examples: replace their content, keep the
-  pattern. `kit-all.json` holds every block for the tests and is never routed.
+  pattern. `all-blocks.json` holds every block for the tests and is never routed.
+- A block several pages show lives once in `app/content/shared.json` (`blocks`, by id); a page holds
+  `{ "ref": "<id>" }` at its place and `usePageContent()` resolves it. Never copy a shared block into a page.
 - To add a page: write `app/content/pages/<slug>.json`, add `app/pages/<path>.vue` on the model of
   `pages/index.vue`, and wire the data of its application blocks (list, table, detail) by building the block's
   `props` from `useApi()` instead of the document's examples. Layout, order and variants come from the
   document: do not rebuild a section by hand in the page.
-- The section kit is `app/components/kit/`: one section per block type (`sections/Kb*.vue`), the shadcn-vue
-  primitives they use (`ui/`), `KbPage`, `KbLink`, `KbImage` and `kit.css`, which sets shadcn's variables from
+- The block library is `app/components/blocks/`: one section per block type (`sections/Kb*.vue`), the shadcn-vue
+  primitives they use (`ui/`), `KbPage`, `KbLink`, `KbImage` and `blocks.css`, which sets shadcn's variables from
   the design tokens under `.kb-root`. Kanboto copies this folder as is into its page workshop: inside it, only
   relative imports between its files, explicit `vue` imports, no Nuxt composable (`KbLink` resolves `NuxtLink`),
   no value outside the tokens. Sections use shadcn's colour classes (`bg-background`, `text-muted-foreground`,
@@ -124,13 +133,13 @@ Rules in priority order: when two conflict, the first one wins.
 - A section keeps what the workshop reads: `data-kb-block` and `data-kb-type` on its root (through
   `KbSection`), `data-kb-field` on each element that shows a field, `data-kb-item` on each entry of a list.
   A missing field renders nothing; the title is `h1` only in the block `KbPage` designates (`useHeading()`).
-- A block the kit does not have is a `custom` block, shown by `KbCustom` with its description. To build it:
-  write its component in `app/components/kit/sections/` on the model of the others (wrapped in `KbSection`,
+- A block the block library does not have is a `custom` block, shown by `KbCustom` with its description. To build it:
+  write its component in `app/components/blocks/sections/` on the model of the others (wrapped in `KbSection`,
   same markers), then register it under its type in the `SECTIONS` map of `KbPage.vue` and give the block that
   type in the page document.
-- More shadcn-vue primitives: `npx shadcn-vue@latest add <name>` (`components.json` points to the kit's `ui/`),
+- More shadcn-vue primitives: `npx shadcn-vue@latest add <name>` (`components.json` points to the library's `ui/`),
   then rewrite the generated imports as relative ones and drop `dark:` classes. Icons named in a page document
-  come from the allowlist of `kit/lib/icons.ts`.
+  come from the allowlist of `blocks/lib/icons.ts`.
 - Kanboto's page workshop frames the running site to point at blocks: `app/plugins/kanboto-inspect.client.ts`
   and `server/plugins/frame.ts`, both off unless `NUXT_PUBLIC_KANBOTO_INSPECT_ORIGIN` is set (outside
   production only); keep them.
